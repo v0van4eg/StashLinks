@@ -255,7 +255,7 @@ document.addEventListener('DOMContentLoaded', function() {
             a.style.display = 'none';
             a.href = url;
             const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-            a.download = `${selectedTemplateName}_catalog_${timestamp}.xlsx`;
+            a.download = `${selectedTemplateName}_album_${timestamp}.xlsx`;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);

@@ -38,8 +38,8 @@
                     <!-- Форма для архива -->
                     <form method="POST" action="{{ url_for('handle_upload') }}" enctype="multipart/form-data" id="archive-form">
                         <div class="form-group">
-                            <label for="catalog">Имя каталога:</label>
-                            <input type="text" id="catalog" name="catalog">
+                            <label for="album">Имя альбома:</label>
+                            <input type="text" id="album" name="album_name">
                             <div class="help-text">
                                 📁 Если не указано, будет использовано имя ZIP-архива<br>
                                 Пример: archive.zip → папка "archive"

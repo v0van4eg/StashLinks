@@ -262,7 +262,7 @@ def handle_single_upload_logic(request):
 
 def handle_archive_upload_logic(request):
     """Логика обработки ZIP архива"""
-    catalog_name = request.form.get('catalog', '').strip()
+    album_name = request.form.get('album_name', '').strip()
     archive_file = request.files['archive']
 
     if not archive_file or archive_file.filename == '':
@@ -272,18 +272,18 @@ def handle_archive_upload_logic(request):
         return None, 'Файл должен быть ZIP архивом'
 
     # Если имя каталога не указано, используем имя ZIP-архива (без расширения)
-    if not catalog_name:
-        catalog_name = os.path.splitext(archive_file.filename)[0]
-        catalog_name = safe_folder_name(catalog_name)
+    if not album_name:
+        album_name = os.path.splitext(archive_file.filename)[0]
+        album_name = safe_folder_name(album_name)
 
     try:
-        # Используем catalog_name как template_name
-        image_data = process_zip_archive(archive_file, catalog_name)
+        # Используем album_name как template_name
+        image_data = process_zip_archive(archive_file, album_name)
         if not image_data:
             return None, 'В архиве не найдено подходящих изображений'
 
-        # Сохраняем результаты с catalog_name как product_name
-        result_id = save_results_to_file(image_data, catalog_name)
+        # Сохраняем результаты с album_name как product_name
+        result_id = save_results_to_file(image_data, album_name)
         return result_id, None
     except Exception as e:
         return None, f'Ошибка при обработке архива: {str(e)}'
