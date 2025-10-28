@@ -2,44 +2,47 @@
 from .base_generator import BaseGenerator
 from openpyxl.utils import get_column_letter
 
+
 class MegamarketGenerator(BaseGenerator):
     def __init__(self):
-        # Имя шаблона может совпадать с именем в списке TEMPLATES
-        super().__init__('megamarket.xlsx')
+        super().__init__('В строку')
 
-    def get_worksheet_title(self): # Переопределяем для конкретного шаблона
-        return "Megamarket Images"
+    def get_worksheet_title(self):
+        return "Images"
 
     def get_headers(self):
-        headers = ["Код товара СММ(обязательно)", "Ссылка на основное фото"]
-        for i in range(1, 10):
-            headers.append(f"Ссылка на доп. фото №{i}")
+        # Создаем заголовки: Артикул + Ссылка 1, Ссылка 2, и т.д.
+        headers = ["Артикул"]
+        # Определяем максимальное количество ссылок для заголовков
+        max_links = 10  # Можно увеличить при необходимости
+        for i in range(1, max_links + 1):
+            headers.append(f"Ссылка {i}")
         return headers
 
-    def generate_row_data(self, article, urls, template_name): # template_name теперь доступен, но не используется в этом генераторе
-        row_data = [article]  # Код товара СММ
-        # Добавляем ссылки на изображения
-        if urls:
-            row_data.append(urls[0])  # Основное фото
-            # Дополнительные фото (максимум 9)
-            for i in range(1, 10):
-                if i < len(urls):
-                    row_data.append(urls[i])
-                else:
-                    row_data.append("")
-        else:
-            # Если нет изображений, добавляем пустые ячейки
-            row_data.append("")  # Основное фото
-            for i in range(1, 10):
-                row_data.append("")
+    def generate_row_data(self, article, urls, template_name):
+        # Первая ячейка - артикул
+        row_data = [article]
+
+        # Остальные ячейки - ссылки (каждая в отдельной ячейке)
+        for url in urls:
+            row_data.append(url)
+
+        # Заполняем оставшиеся ячейки пустыми значениями
+        # чтобы выровнять количество столбцов
+        remaining_cells = len(self.get_headers()) - len(row_data)
+        for i in range(remaining_cells):
+            row_data.append("")
+
         return row_data
 
     def adjust_column_widths(self, ws):
+        # Настраиваем ширину столбцов для лучшего отображения
         column_widths = {
-            'A': 20,  # Код товара
-            'B': 40,  # Основное фото
+            'A': 20,  # Артикул
         }
-        for i in range(3, 12):  # Столбцы C-K для доп. фото
+
+        # Ширина для столбцов со ссылками
+        for i in range(2, len(self.get_headers()) + 1):
             column_letter = get_column_letter(i)
             column_widths[column_letter] = 40
 

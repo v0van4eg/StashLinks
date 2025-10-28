@@ -18,6 +18,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Данные и состояние
     let articleData = {};
+    let currentTemplate = '';
+    let currentArticle = '';
 
     // Инициализация приложения
     initArchive();
@@ -103,7 +105,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        articleSelect.innerHTML = '<option value="">-- Выберите артикул --</option>';
+        articleSelect.innerHTML = '<option value="">-- Все артикулы --</option>';
         Object.keys(articleData[templateName]).forEach(articleName => {
             const option = document.createElement('option');
             option.value = articleName;
@@ -113,22 +115,60 @@ document.addEventListener('DOMContentLoaded', function() {
         articleSelect.disabled = false;
     }
 
-    function displayArticleUrls(templateName, articleName) {
-        if (!templateName || !articleName || !articleData[templateName] || !articleData[templateName][articleName]) {
+    // НОВАЯ ФУНКЦИЯ: Отображение всех ссылок выбранного каталога
+    function displayTemplateUrls(templateName) {
+        if (!templateName || !articleData[templateName]) {
             urlList.innerHTML = '';
-            archiveTitle.textContent = 'Артикул не найден';
+            archiveTitle.textContent = 'Каталог не найден';
             bulkActions.style.display = 'none';
             return;
         }
 
-        const urls = articleData[templateName][articleName];
-        archiveTitle.textContent = `Артикул: ${articleName}`;
+        const urlsByArticle = articleData[templateName];
+        archiveTitle.textContent = `Каталог: ${templateName}`;
         urlList.innerHTML = '';
 
-        urls.forEach(item => {
-            const urlItem = createUrlItem(item, articleName, templateName);
-            urlList.appendChild(urlItem);
+        // Проходим по всем артикулам в каталоге
+        Object.entries(urlsByArticle).forEach(([articleName, items]) => {
+            // Добавляем заголовок артикула
+            const articleHeader = document.createElement('div');
+            articleHeader.className = 'article-info';
+            articleHeader.textContent = `Артикул: ${articleName}`;
+            urlList.appendChild(articleHeader);
+
+            // Добавляем каждое изображение артикула
+            items.forEach(item => {
+                const urlItem = createUrlItem(item, articleName, templateName);
+                urlList.appendChild(urlItem);
+            });
         });
+
+        bulkActions.style.display = 'flex';
+    }
+
+    // ИЗМЕНЕННАЯ ФУНКЦИЯ: Теперь отображает либо все артикулы каталога, либо конкретный артикул
+    function displayUrls(templateName, articleName = '') {
+        if (!templateName || !articleData[templateName]) {
+            urlList.innerHTML = '';
+            archiveTitle.textContent = 'Каталог не найден';
+            bulkActions.style.display = 'none';
+            return;
+        }
+
+        if (articleName && articleData[templateName][articleName]) {
+            // Показать только выбранный артикул
+            const urls = articleData[templateName][articleName];
+            archiveTitle.textContent = `Каталог: ${templateName}, Артикул: ${articleName}`;
+            urlList.innerHTML = '';
+
+            urls.forEach(item => {
+                const urlItem = createUrlItem(item, articleName, templateName);
+                urlList.appendChild(urlItem);
+            });
+        } else {
+            // Показать все артикулы каталога
+            displayTemplateUrls(templateName);
+        }
 
         bulkActions.style.display = 'flex';
     }
@@ -160,6 +200,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         bulkActions.style.display = 'flex';
+
+        // Сбросить выбранные значения
+        templateSelect.value = '';
+        articleSelect.value = '';
+        articleSelect.disabled = true;
+        currentTemplate = '';
+        currentArticle = '';
     }
 
     function createUrlItem(item, articleName, templateName) {
@@ -218,24 +265,30 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function handleTemplateChange() {
         const selectedTemplate = this.value;
+        currentTemplate = selectedTemplate;
         populateArticleList(selectedTemplate);
 
-        if (!selectedTemplate) {
+        if (selectedTemplate) {
+            // При выборе каталога показываем все его артикулы
+            displayUrls(selectedTemplate);
+        } else {
             urlList.innerHTML = '';
-            archiveTitle.textContent = 'Выберите артикул';
+            archiveTitle.textContent = 'Выберите каталог';
             bulkActions.style.display = 'none';
+            articleSelect.disabled = true;
         }
     }
 
     function handleArticleChange() {
-        const selectedTemplate = templateSelect.value;
         const selectedArticle = this.value;
+        currentArticle = selectedArticle;
 
-        if (selectedTemplate && selectedArticle) {
-            displayArticleUrls(selectedTemplate, selectedArticle);
+        if (currentTemplate) {
+            // При выборе артикула показываем только его, при сбросе - все артикулы каталога
+            displayUrls(currentTemplate, selectedArticle);
         } else {
             urlList.innerHTML = '';
-            archiveTitle.textContent = 'Выберите артикул';
+            archiveTitle.textContent = 'Выберите каталог';
             bulkActions.style.display = 'none';
         }
     }

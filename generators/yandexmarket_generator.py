@@ -1,40 +1,28 @@
 # generators/yandexmarket_generator.py
 from .base_generator import BaseGenerator
+
 class YandexmarketGenerator(BaseGenerator):
     def __init__(self):
-        # Имя шаблона может совпадать с именем в списке TEMPLATES
-        super().__init__('incell.xlsx')
+        super().__init__('В ячейку')
 
-    def get_start_row(self):
-        return 2  # ЯндексМаркет начинает данные с 4 строки
-
-    def get_worksheet_title(self): # Переопределяем для конкретного шаблона
-        return "YandexMarket Catalog"
+    def get_worksheet_title(self):
+        return "Images"
 
     def get_headers(self):
-        # Для ЯндексМаркета заголовки уже есть в шаблоне
-        return []
+        # Только два столбца: Артикул и Ссылки
+        return ["Артикул", "Ссылки на изображения"]
 
-    def create_new_workbook(self):
-        """Создает базовый шаблон для ЯндексМаркета"""
-        wb = Workbook()
-        ws = wb.active
-        ws.title = self.get_worksheet_title() # Используем переопределенный метод
-        # Стили для заголовков (если нужно добавить в новые строки)
-        header_font = Font(bold=True)
-        # Предполагаем, что заголовки в шаблоне есть, иначе добавим их
-        # ws.cell(row=1, column=1, value="Название").font = header_font
-        # ws.cell(row=1, column=2, value="Описание").font = header_font
-        # и т.д.
-        return wb, ws, 2 # или get_start_row()
+    def generate_row_data(self, article, urls, template_name):
+        # Первая ячейка - артикул
+        # Вторая ячейка - все ссылки через запятую
+        links_text = ", ".join(urls) if urls else ""
+        return [article, links_text]
 
-    def generate_row_data(self, article, urls, template_name): # template_name теперь доступен, но не используется в этом генераторе
-        # строка из 30 ссылок, разделённых запятыми
-        if urls:
-            urls = '\n'.join(urls)
-        else:
-            urls = ""
-        return [
-            article,  # A
-            urls,     # B список ссылок на изображения
-        ]
+    def adjust_column_widths(self, ws):
+        # Широкая вторая колонка для размещения всех ссылок
+        column_widths = {
+            'A': 20,   # Артикул
+            'B': 100,  # Ссылки (широкая колонка для текста с запятыми)
+        }
+        for col, width in column_widths.items():
+            ws.column_dimensions[col].width = width
