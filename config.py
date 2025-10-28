@@ -19,7 +19,7 @@ class Config:
     # Пути к шаблонам XLSX (обновлены, если имя шаблона отличается от имени файла)
     TEMPLATE_PATHS = {
         'В строку': 'templates/megamarket.xlsx',
-        'В ячейку': 'templates/yandexmarket.xlsx',
+        'В ячейку': 'templates/incell.xlsx',
         # Убедитесь, что имена ключей соответствуют именам в TEMPLATES
     }
 

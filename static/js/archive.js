@@ -87,7 +87,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function populateTemplateList() {
-        templateSelect.innerHTML = '<option value="">-- Выберите шаблон --</option>';
+        templateSelect.innerHTML = '<option value="">-- Выберите каталог --</option>';
         Object.keys(articleData).forEach(templateName => {
             const option = document.createElement('option');
             option.value = templateName;

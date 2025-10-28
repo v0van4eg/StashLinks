@@ -3,7 +3,7 @@ from .base_generator import BaseGenerator
 class YandexmarketGenerator(BaseGenerator):
     def __init__(self):
         # Имя шаблона может совпадать с именем в списке TEMPLATES
-        super().__init__('yandexmarket.xlsx')
+        super().__init__('incell.xlsx')
 
     def get_start_row(self):
         return 4  # ЯндексМаркет начинает данные с 4 строки
@@ -31,14 +31,10 @@ class YandexmarketGenerator(BaseGenerator):
     def generate_row_data(self, article, urls, template_name): # template_name теперь доступен, но не используется в этом генераторе
         # строка из 30 ссылок, разделённых запятыми
         if urls:
-            urls = ','.join(urls)
+            urls = ', '.join(urls)
         else:
             urls = ""
         return [
-            "", # A
-            "", # B
-            article,  # C: Ваш SKU *
-            f"Товар артикул {article}",  # D: Название товара *
-            urls,  # спсиорк ссылок на изображения
-            f"Описание товара артикул {article}",  # E: Описание товара *
+            article,  # A
+            urls,     # B список ссылок на изображения
         ]
