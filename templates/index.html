@@ -1,4 +1,3 @@
-<!-- templates/index.html -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -12,16 +11,16 @@
     <button class="theme-toggle" id="themeToggle">🌙</button>
 
     <!-- Модальное окно для выбора шаблона -->
-    <div id="xlsxModal" class="modal" style="display: none; position: fixed; z-index: 1002; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
-        <div class="modal-content" style="background-color: var(--container-bg); margin: 15% auto; padding: 20px; border: 1px solid var(--input-border); border-radius: 8px; width: 300px; text-align: center;">
+    <div id="xlsxModal" class="modal">
+        <div class="modal-content">
             <h3>Выберите шаблон</h3>
-            <select id="templateSelectForXLSX" style="width: 100%; padding: 10px; margin-bottom: 15px; border: 2px solid var(--input-border); border-radius: 8px; background-color: var(--container-bg); color: var(--text-color);">
+            <select id="templateSelectForXLSX">
                 <option value="">-- Выберите шаблон --</option>
                 <option value="В строку">В строку</option>
                 <option value="В ячейку">В ячейку</option>
             </select>
-            <button id="confirmXLSXBtn" class="btn" style="width: auto; padding: 10px 20px;">Сгенерировать</button>
-            <button id="cancelXLSXBtn" class="btn btn-secondary" style="width: auto; padding: 10px 20px; margin-left: 10px;">Отмена</button>
+            <button id="confirmXLSXBtn" class="btn">Сгенерировать</button>
+            <button id="cancelXLSXBtn" class="btn btn-secondary">Отмена</button>
         </div>
     </div>
 
@@ -36,7 +35,7 @@
                     {% if error %}
                     <div class="error">{{ error }}</div>
                     {% endif %}
-                    <!-- Форма для архива (теперь без выбора шаблона) -->
+                    <!-- Форма для архива -->
                     <form method="POST" action="{{ url_for('handle_upload') }}" enctype="multipart/form-data" id="archive-form">
                         <div class="form-group">
                             <label for="catalog">Имя каталога:</label>
@@ -56,7 +55,7 @@
                         </div>
                         <button type="submit" class="btn">📦 Загрузить архив</button>
                     </form>
-                    <h2>
+
                     <h1>Загрузка отдельных файлов</h1>
                     <form method="POST" action="{{ url_for('handle_upload') }}" enctype="multipart/form-data" id="single-form">
                         <div class="form-group">
@@ -78,28 +77,30 @@
                         {% for item in image_urls %}
                             {% if item.article != current_article %}
                                 {% if current_article is not none %}
-                                    {# Закрываем предыдущую группу, если она была #}
                                 {% endif %}
                                 {% set current_article = item.article %}
                             {% endif %}
-                            <div class="url-item">
-                                    <div class="preview-container">
-                                        <!-- Используем thumbnail_url и loading="lazy" -->
-                                        <img
-                                            src="{{ item.thumbnail_url | default(item.url) }}"
-                                            alt="Preview {{ item.filename }}"
-                                            class="image-preview"
-                                            loading="lazy"
-                                            onerror="this.onerror=null; this.src='{{ item.url }}';"
-                                        >
+                            <div class="url-item" data-url="{{ item.url }}">
+                                <div class="preview-container">
+                                    <img
+                                        src="{{ item.thumbnail_url | default(item.url) }}"
+                                        alt="Preview {{ item.filename }}"
+                                        class="image-preview"
+                                        loading="lazy"
+                                        onerror="this.onerror=null; this.src='{{ item.url }}';"
+                                    >
+                                </div>
+                                <div class="url-content">
+                                    <span class="article-info">Артикул: {{ item.article }}</span>
+                                    <div class="url-text" data-url="{{ item.url }}">
+                                        {{ item.url }}
+                                        <span class="copy-hint">🔗 Кликните чтобы скопировать</span>
                                     </div>
-                                    <div class="url-content">
-                                        <span class="article-info">Артикул: {{ item.article }}</span>
-                                        <div class="url-text" data-url="{{ item.url }}">
-                                            {{ item.url }}
-                                            <span class="copy-hint">🔗 Кликните чтобы скопировать</span>
-                                        </div>
-                                    </div>
+                                </div>
+                                <!-- Кнопка удаления -->
+                                <button class="delete-btn" data-url="{{ item.url }}" title="Удалить изображение и файлы">
+                                    🗑️
+                                </button>
                             </div>
                         {% endfor %}
                     </div>
@@ -110,7 +111,6 @@
                         <button class="btn btn-secondary" id="copyAllListBtn">
                             📝 Скопировать списком (перенос строки)
                         </button>
-                        <!-- Изменена кнопка: теперь она вызывает модальное окно -->
                         <button class="btn btn-secondary" id="triggerXLSXModalBtn">
                             📋 Сгенерировать документ XLSX
                         </button>
@@ -128,392 +128,7 @@
             <p>Сделано в ГРАДИЕНТ</p>
         </footer>
     </div>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // --- Код JavaScript ---
-            const themeToggle = document.getElementById('themeToggle');
-            const body = document.body;
 
-            // --- НОВОЕ: Элементы модального окна ---
-            const triggerXLSXModalBtn = document.getElementById('triggerXLSXModalBtn');
-            const xlsxModal = document.getElementById('xlsxModal');
-            const confirmXLSXBtn = document.getElementById('confirmXLSXBtn');
-            const cancelXLSXBtn = document.getElementById('cancelXLSXBtn');
-            const templateSelectForXLSX = document.getElementById('templateSelectForXLSX');
-            // --- /НОВОЕ ---
-
-            // Проверяем сохранённую тему в localStorage
-            const savedTheme = localStorage.getItem('theme');
-            if (savedTheme === 'dark') {
-                body.classList.add('dark-theme');
-                themeToggle.textContent = '☀️';
-            } else {
-                themeToggle.textContent = '🌙';
-            }
-            themeToggle.addEventListener('click', function() {
-                body.classList.toggle('dark-theme');
-                if (body.classList.contains('dark-theme')) {
-                    themeToggle.textContent = '☀️';
-                    localStorage.setItem('theme', 'dark');
-                } else {
-                    themeToggle.textContent = '🌙';
-                    localStorage.setItem('theme', 'light');
-                }
-            });
-
-            // --- Функция для показа уведомлений ---
-            function showNotification(message, type = 'success') {
-                const existingNotifications = document.querySelectorAll('.notification');
-                existingNotifications.forEach(notif => notif.remove());
-                const notification = document.createElement('div');
-                notification.className = `notification ${type}`;
-                notification.textContent = message;
-                notification.style.cssText = `
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    padding: 15px 20px;
-                    background: var(--${type === 'success' ? 'notification-success' : 'notification-error'});
-                    color: white;
-                    border-radius: 5px;
-                    z-index: 1000;
-                    animation: slideIn 0.3s ease;
-                `;
-                document.body.appendChild(notification);
-                setTimeout(() => {
-                    notification.remove();
-                }, 3000);
-            }
-
-            // --- Функция копирования текста ---
-            function copyToClipboard(text) {
-                if (navigator.clipboard && window.isSecureContext) {
-                    navigator.clipboard.writeText(text).then(function() {
-                        showNotification('Ссылка скопирована в буфер обмена!');
-                    }).catch(function(err) {
-                        console.error('Ошибка Clipboard API:', err);
-                        fallbackCopyTextToClipboard(text);
-                    });
-                } else {
-                    fallbackCopyTextToClipboard(text);
-                }
-            }
-            // Вспомогательная функция для fallback
-            function fallbackCopyTextToClipboard(text) {
-                const textArea = document.createElement('textarea');
-                textArea.value = text;
-                textArea.style.cssText = `
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 2em;
-                    height: 2em;
-                    padding: 0;
-                    border: none;
-                    outline: none;
-                    boxShadow: none;
-                    background: transparent;
-                    color: transparent;
-                `;
-                document.body.appendChild(textArea);
-                textArea.focus();
-                textArea.select();
-                try {
-                    const successful = document.execCommand('copy');
-                    if (successful) {
-                        showNotification('Ссылка скопирована в буфер обмена!');
-                    } else {
-                        showNotification('Не удалось скопировать ссылку', 'error');
-                    }
-                } catch (err) {
-                    console.error('Ошибка при копировании execCommand: ', err);
-                    showNotification('Ошибка копирования', 'error');
-                }
-                document.body.removeChild(textArea);
-            }
-
-            // --- Функция копирования всех ссылок списком (разделённых переносом строки) ---
-            function copyAllListToClipboard() {
-                const urlItems = document.querySelectorAll('.url-text');
-                if (!urlItems.length) {
-                    showNotification('Нет ссылок для копирования', 'error');
-                    return;
-                }
-                // Извлекаем URL из атрибута data-url и объединяем с новой строки
-                const allUrls = Array.from(urlItems)
-                    .map(item => item.getAttribute('data-url'))
-                    .join('\n'); // Используем \n для разделения строк
-                if (navigator.clipboard && window.isSecureContext) {
-                    navigator.clipboard.writeText(allUrls).then(function() {
-                        showNotification('Список ссылок скопирован в буфер обмена (разделённые строками)!');
-                    }).catch(function(err) {
-                        console.error('Ошибка Clipboard API при копировании списка:', err);
-                        fallbackCopyAllListToClipboard(allUrls); // Резервный метод, если понадобится
-                    });
-                } else {
-                    fallbackCopyAllListToClipboard(allUrls); // Резервный метод
-                }
-            }
-            // Резервный метод для копирования списка ссылок (аналогично основному fallback)
-            function fallbackCopyAllListToClipboard(text) {
-                const textArea = document.createElement('textarea');
-                textArea.value = text;
-                // Стили для скрытия textarea
-                textArea.style.cssText = `
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 2em;
-                    height: 2em;
-                    padding: 0;
-                    border: none;
-                    outline: none;
-                    boxShadow: none;
-                    background: transparent;
-                    color: transparent;
-                `;
-                document.body.appendChild(textArea);
-                textArea.focus();
-                textArea.select();
-                try {
-                    const successful = document.execCommand('copy');
-                    if (successful) {
-                        showNotification('Список ссылок скопирован в буфер обмена (разделённые строками)!');
-                    } else {
-                        showNotification('Не удалось скопировать список ссылок', 'error');
-                    }
-                } catch (err) {
-                    console.error('Ошибка при копировании списка ссылок execCommand: ', err);
-                    showNotification('Ошибка копирования списка ссылок', 'error');
-                }
-                document.body.removeChild(textArea);
-            }
-
-            // --- Функция копирования всех ссылок (запятая) ---
-            function copyAllToClipboard() {
-                const urlItems = document.querySelectorAll('.url-text');
-                if (!urlItems.length) {
-                    showNotification('Нет ссылок для копирования', 'error');
-                    return;
-                }
-                const allUrls = Array.from(urlItems).map(item => item.getAttribute('data-url')).join(', ');
-                if (navigator.clipboard && window.isSecureContext) {
-                    navigator.clipboard.writeText(allUrls).then(function() {
-                        showNotification('Все ссылки скопированы в буфер обмена!');
-                    }).catch(function(err) {
-                        console.error('Ошибка Clipboard API при копировании всех:', err);
-                        fallbackCopyAllToClipboard(allUrls);
-                    });
-                } else {
-                    fallbackCopyAllToClipboard(allUrls);
-                }
-            }
-            function fallbackCopyAllToClipboard(text) {
-                const textArea = document.createElement('textarea');
-                textArea.value = text;
-                textArea.style.cssText = `
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 2em;
-                    height: 2em;
-                    padding: 0;
-                    border: none;
-                    outline: none;
-                    boxShadow: none;
-                    background: transparent;
-                    color: transparent;
-                `;
-                document.body.appendChild(textArea);
-                textArea.focus();
-                textArea.select();
-                try {
-                    const successful = document.execCommand('copy');
-                    if (successful) {
-                        showNotification('Все ссылки скопированы в буфер обмена!');
-                    } else {
-                        showNotification('Не удалось скопировать все ссылки', 'error');
-                    }
-                } catch (err) {
-                    console.error('Ошибка при копировании всех ссылок execCommand: ', err);
-                    showNotification('Ошибка копирования всех ссылок', 'error');
-                }
-                document.body.removeChild(textArea);
-            }
-
-            // --- Функция для скачивания XLSX документа ---
-            // Теперь принимает шаблон как аргумент
-            function downloadXLSXDocument(selectedTemplateName) {
-                const urlItems = document.querySelectorAll('.url-item');
-                if (!urlItems.length) {
-                    showNotification('Нет ссылок для генерации документа', 'error');
-                    return;
-                }
-
-                // Собираем данные об изображениях с артикулами
-                const imageData = [];
-                // Проходим по всем элементам с изображениями
-                document.querySelectorAll('.url-item').forEach(itemElement => {
-                    const articleElement = itemElement.querySelector('.article-info');
-                    const urlElement = itemElement.querySelector('.url-text');
-                    if (articleElement && urlElement) {
-                        const article = articleElement.textContent.replace('Артикул: ', '').trim();
-                        imageData.push({
-                            url: urlElement.getAttribute('data-url'),
-                            article: article,
-                            filename: urlElement.getAttribute('data-url').split('/').pop()
-                        });
-                    }
-                });
-
-                // Проверяем, что шаблон передан и не пуст
-                if (!selectedTemplateName) {
-                     showNotification('Шаблон не выбран. Невозможно сгенерировать XLSX.', 'error');
-                     console.error("Шаблон не передан в downloadXLSXDocument.");
-                     return;
-                }
-
-                if (!selectedTemplateName.trim()) {
-                     showNotification('Имя шаблона пустое. Невозможно выбрать шаблон.', 'error');
-                     return;
-                }
-
-                console.log('Отправляемые данные для XLSX (index):', {
-                    image_data: imageData,
-                    template_name: selectedTemplateName // Используем переданный шаблон
-                });
-
-                // Показываем уведомление о начале генерации
-                showNotification('Генерация XLSX документа для шаблона: ' + selectedTemplateName, 'success');
-
-                // Отправляем POST запрос с данными
-                fetch('/admin/download-xlsx', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        image_data: imageData,
-                        template_name: selectedTemplateName // Передаём выбранный шаблон
-                    })
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        return response.json().then(err => { throw new Error(err.error || 'Ошибка сервера') });
-                    }
-                    return response.blob();
-                })
-                .then(blob => {
-                    // Создаем ссылку для скачивания
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.style.display = 'none';
-                    a.href = url;
-                    // Используем имя шаблона и временную метку для имени файла
-                    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-                    a.download = `${selectedTemplateName}_catalog_${timestamp}.xlsx`;
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    document.body.removeChild(a);
-                    showNotification('XLSX документ для шаблона ' + selectedTemplateName + ' успешно сгенерирован и скачан!', 'success');
-                })
-                .catch(error => {
-                    console.error('Ошибка при генерации XLSX (index):', error);
-                    showNotification('Ошибка при генерации XLSX: ' + error.message, 'error');
-                });
-            }
-
-            // --- Привязка событий для копирования при клике на ссылку ---
-            document.querySelectorAll('.url-text').forEach(urlElement => {
-                urlElement.addEventListener('click', function(e) {
-                    // Не копируем если кликнули на подсказку
-                    if (e.target.classList.contains('copy-hint')) return;
-                    const url = this.getAttribute('data-url');
-                    if (url) {
-                        copyToClipboard(url);
-                        // Визуальная обратная связь
-                        this.classList.add('copied');
-                        setTimeout(() => {
-                            this.classList.remove('copied');
-                        }, 2000);
-                    }
-                });
-            });
-
-            // --- Привязка к кнопке "Копировать все" (через запятую) ---
-            const copyAllBtn = document.getElementById('copyAllBtn');
-            if (copyAllBtn) {
-                copyAllBtn.addEventListener('click', copyAllToClipboard);
-            }
-
-            // --- Привязка к НОВОЙ кнопке "Копировать все ссылки списком" ---
-            const copyAllListBtn = document.getElementById('copyAllListBtn');
-            if (copyAllListBtn) {
-                copyAllListBtn.addEventListener('click', copyAllListToClipboard);
-            }
-
-            // --- Привязка к НОВОЙ кнопке "Сгенерировать документ XLSX" (модальное окно) ---
-            if (triggerXLSXModalBtn) {
-                triggerXLSXModalBtn.addEventListener('click', function() {
-                    xlsxModal.style.display = 'block';
-                });
-            }
-
-            // Обработчик подтверждения выбора шаблона
-            if (confirmXLSXBtn) {
-                confirmXLSXBtn.addEventListener('click', function() {
-                    const selectedTemplate = templateSelectForXLSX.value;
-                    if (selectedTemplate) {
-                        xlsxModal.style.display = 'none';
-                        templateSelectForXLSX.value = ''; // Сбрасываем выбор
-                        downloadXLSXDocument(selectedTemplate); // Вызываем функцию с выбранным шаблоном
-                    } else {
-                        showNotification('Пожалуйста, выберите шаблон.', 'error');
-                    }
-                });
-            }
-
-            // Обработчик отмены выбора шаблона
-            if (cancelXLSXBtn) {
-                cancelXLSXBtn.addEventListener('click', function() {
-                    xlsxModal.style.display = 'none';
-                    templateSelectForXLSX.value = ''; // Сбрасываем выбор
-                });
-            }
-
-            // Закрытие модального окна при клике вне его
-            window.addEventListener('click', function(event) {
-                if (event.target === xlsxModal) {
-                    xlsxModal.style.display = 'none';
-                    templateSelectForXLSX.value = ''; // Сбрасываем выбор
-                }
-            });
-
-            // --- Предпросмотр файлов для формы архива (опционально, если нужно) ---
-            const archiveInput = document.getElementById('archive');
-            if (archiveInput) {
-                archiveInput.addEventListener('change', function(e) {
-                    const files = e.target.files;
-                    let previewContainer = document.querySelector('.upload-preview');
-                    // Удаляем старый превью если есть
-                    if (previewContainer) {
-                        previewContainer.remove();
-                    }
-                    if (files.length > 0) {
-                        previewContainer = document.createElement('div');
-                        previewContainer.className = 'upload-preview';
-                        previewContainer.innerHTML = '<h3>Выбранный файл:</h3>';
-                        Array.from(files).forEach(file => {
-                            const fileInfo = document.createElement('div');
-                            fileInfo.textContent = file.name;
-                            previewContainer.appendChild(fileInfo);
-                        });
-                        document.querySelector('.upload-section').appendChild(previewContainer);
-                    }
-                });
-            }
-        });
-    </script>
+    <script src="{{ url_for('static', filename='js/index.js') }}"></script>
 </body>
 </html>

@@ -11,6 +11,8 @@ import tempfile
 import shutil
 import json
 from datetime import datetime
+from urllib.parse import quote, unquote  # Добавьте unquote если его нет
+
 # Импортируем фабрику генераторов
 from generators import GeneratorFactory
 # --- НОВОЕ: Импорт Pillow ---
@@ -463,6 +465,85 @@ def archive():
     print(f"Собрано image_data для архива: {len(image_data)} элементов")  # Для отладки
     # Рендерим шаблон archive.html
     return render_template('archive.html', image_data=image_data, error='')
+
+
+# Добавьте этот маршрут в app.py после существующих маршрутов
+
+@app.route('/admin/delete-image', methods=['POST'])
+def delete_image():
+    """Удаляет изображение и его миниатюру"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        image_url = data.get('image_url')
+        if not image_url:
+            return jsonify({'error': 'No image URL provided'}), 400
+
+        # Извлекаем путь из URL
+        base_path = f"{Config.BASE_URL}/images/"
+        if not image_url.startswith(base_path):
+            return jsonify({'error': 'Invalid image URL'}), 400
+
+        # Получаем относительный путь от /images/
+        relative_path = image_url[len(base_path):]
+
+        # Декодируем URL-encoded путь
+        decoded_path = unquote(relative_path)
+
+        # Разбираем путь: template_folder/article_folder/filename
+        path_parts = decoded_path.split('/')
+        if len(path_parts) < 3:
+            return jsonify({'error': 'Invalid image path'}), 400
+
+        template_folder = path_parts[0]
+        article_folder = path_parts[1]
+        filename = '/'.join(path_parts[2:])  # На случай вложенных путей
+
+        # Полный путь к файлу
+        file_path = os.path.join(Config.UPLOAD_FOLDER, template_folder, article_folder, filename)
+
+        # Проверяем существование файла
+        if not os.path.exists(file_path):
+            return jsonify({'error': 'File not found'}), 404
+
+        # Удаляем основной файл
+        os.remove(file_path)
+
+        # Пытаемся найти и удалить миниатюру
+        file_name_base = os.path.splitext(filename)[0]
+
+        # Варианты имени миниатюры
+        thumb_variants = [
+            f"{file_name_base}_thumb.jpg",
+            f"{file_name_base}_thumb.jpeg",
+            f"{file_name_base}_thumb.png"
+        ]
+
+        for thumb_name in thumb_variants:
+            thumb_path = os.path.join(Config.UPLOAD_FOLDER, template_folder, article_folder, thumb_name)
+            if os.path.exists(thumb_path):
+                os.remove(thumb_path)
+                print(f"Удалена миниатюра: {thumb_path}")
+
+        # Проверяем, пуста ли папка артикула, и удаляем если пуста
+        article_folder_path = os.path.join(Config.UPLOAD_FOLDER, template_folder, article_folder)
+        if os.path.exists(article_folder_path) and not os.listdir(article_folder_path):
+            os.rmdir(article_folder_path)
+            print(f"Удалена пустая папка артикула: {article_folder_path}")
+
+            # Проверяем, пуста ли папка шаблона, и удаляем если пуста
+            template_folder_path = os.path.join(Config.UPLOAD_FOLDER, template_folder)
+            if os.path.exists(template_folder_path) and not os.listdir(template_folder_path):
+                os.rmdir(template_folder_path)
+                print(f"Удалена пустая папка шаблона: {template_folder_path}")
+
+        return jsonify({'success': True, 'message': 'Изображение и миниатюра удалены'})
+
+    except Exception as e:
+        app.logger.error(f"Error deleting image: {str(e)}")
+        return jsonify({'error': f'Ошибка при удалении изображения: {str(e)}'}), 500
 
 
 if __name__ == '__main__':

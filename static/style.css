@@ -711,3 +711,82 @@ input[type="text"]:focus {
         margin-bottom: 5px;
     }
 }
+
+/* Стили для кнопки удаления */
+.delete-btn {
+    flex: 0 0 auto;
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    color: var(--label-color);
+    margin-left: 10px;
+}
+
+.delete-btn:hover {
+    background: var(--error-bg);
+    color: white;
+    transform: scale(1.1);
+}
+
+/* Адаптивность для кнопки удаления */
+@media (max-width: 768px) {
+    .delete-btn {
+        margin-left: 0;
+        margin-top: 10px;
+        align-self: center;
+    }
+
+    .url-item {
+        position: relative;
+        padding-right: 50px;
+    }
+
+    .delete-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+    }
+}
+
+/* Стили для модального окна */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1002;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: var(--container-bg);
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid var(--input-border);
+    border-radius: 8px;
+    width: 300px;
+    text-align: center;
+}
+
+.modal-content select {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 2px solid var(--input-border);
+    border-radius: 8px;
+    background-color: var(--container-bg);
+    color: var(--text-color);
+}
+
+.modal-content .btn {
+    width: auto;
+    padding: 10px 20px;
+    margin: 0 5px;
+}
+
