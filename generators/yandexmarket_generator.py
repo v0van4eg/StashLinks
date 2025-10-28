@@ -6,7 +6,7 @@ class YandexmarketGenerator(BaseGenerator):
         super().__init__('incell.xlsx')
 
     def get_start_row(self):
-        return 4  # ЯндексМаркет начинает данные с 4 строки
+        return 2  # ЯндексМаркет начинает данные с 4 строки
 
     def get_worksheet_title(self): # Переопределяем для конкретного шаблона
         return "YandexMarket Catalog"
@@ -31,7 +31,7 @@ class YandexmarketGenerator(BaseGenerator):
     def generate_row_data(self, article, urls, template_name): # template_name теперь доступен, но не используется в этом генераторе
         # строка из 30 ссылок, разделённых запятыми
         if urls:
-            urls = ', '.join(urls)
+            urls = '\n'.join(urls)
         else:
             urls = ""
         return [
