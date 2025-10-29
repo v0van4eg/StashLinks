@@ -344,6 +344,7 @@ def hello():
     return render_template('hello.html')
 
 
+# app.py
 @app.route('/admin/download-xlsx', methods=['POST'])
 def download_xlsx():
     try:
@@ -418,8 +419,7 @@ def download_xlsx():
         return jsonify({'error': f'Ошибка при генерации XLSX-файла: {str(e)}'}), 500
 
 
-# ... весь остальной код без изменений ...
-
+# app.py
 @app.route('/admin/archive')
 def archive():
     """
@@ -463,7 +463,13 @@ def archive():
 
     # --- ИСПРАВЛЕННАЯ ФУНКЦИЯ СОРТИРОВКИ ---
     def sort_key(item):
-        # Извлекаем порядковый номер из имени файла
+        # Сначала по шаблону
+        template_order = item['template']
+
+        # Затем по артикулу
+        article_order = item['article']
+
+        # Затем по порядковому номеру из имени файла
         # Ожидаемый формат: <артикул>_<номер>_<хеш>.<расширение>
         # Пример: 4296278785_2_ffe8e5.jpg -> извлекаем '2'
         match = re.search(r'_(\d+)_[a-f0-9]+\.\w+$', item['filename'])
@@ -476,7 +482,7 @@ def archive():
             order_num = 0
 
         # Сортируем по template, article (как строки), затем по порядковому номеру (как число)
-        return (item['template'], item['article'], order_num)
+        return (template_order, article_order, order_num)
 
     image_data.sort(key=sort_key)
     # --- /ИСПРАВЛЕННАЯ ФУНКЦИЯ СОРТИРОВКИ ---
@@ -485,8 +491,6 @@ def archive():
     # Рендерим шаблон archive.html
     return render_template('archive.html', image_data=image_data, error='')
 
-
-# Добавьте этот маршрут в app.py после существующих маршрутов
 
 @app.route('/admin/delete-image', methods=['POST'])
 def delete_image():

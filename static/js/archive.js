@@ -70,7 +70,28 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function processImageData() {
         if (imageData && Array.isArray(imageData)) {
-            imageData.forEach(item => {
+            // Сначала сортируем все данные
+            const sortedImageData = [...imageData].sort((a, b) => {
+                // Сортировка по шаблону
+                if (a.template < b.template) return -1;
+                if (a.template > b.template) return 1;
+
+                // Затем по артикулу
+                if (a.article < b.article) return -1;
+                if (a.article > b.article) return 1;
+
+                // Затем по порядковому номеру из имени файла
+                const matchA = a.filename.match(/_(\d+)_[a-f0-9]+\.\w+$/);
+                const matchB = b.filename.match(/_(\d+)_[a-f0-9]+\.\w+$/);
+
+                const numA = matchA ? parseInt(matchA[1], 10) : 0;
+                const numB = matchB ? parseInt(matchB[1], 10) : 0;
+
+                return numA - numB;
+            });
+
+            // Теперь группируем отсортированные данные
+            sortedImageData.forEach(item => {
                 const template = item.template;
                 const article = item.article;
                 if (!articleData[template]) {
@@ -86,29 +107,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             });
 
+            // Дополнительная сортировка внутри каждого артикула
+            Object.keys(articleData).forEach(template => {
+                Object.keys(articleData[template]).forEach(article => {
+                    articleData[template][article].sort((a, b) => {
+                        const matchA = a.filename.match(/_(\d+)_[a-f0-9]+\.\w+$/);
+                        const matchB = b.filename.match(/_(\d+)_[a-f0-9]+\.\w+$/);
 
-    // Сортировка данных
-    Object.keys(articleData).forEach(template => {
-        const sortedArticles = {};
-        Object.keys(articleData[template]).sort().forEach(article => {
-            // Сортировка изображений внутри артикула по числовому порядковому номеру
-            sortedArticles[article] = articleData[template][article].sort((a, b) => {
-                // Извлекаем порядковый номер из имени файла
-                // Ожидаемый формат: <артикул>_<номер>_<хеш>.<расширование>
-                // Пример: 4296278785_2_ffe8e5.jpg -> извлекаем '2'
-                const matchA = a.filename.match(/_(\d+)_[a-f0-9]+\.\w+$/);
-                const matchB = b.filename.match(/_(\d+)_[a-f0-9]+\.\w+$/);
+                        const numA = matchA ? parseInt(matchA[1], 10) : 0;
+                        const numB = matchB ? parseInt(matchB[1], 10) : 0;
 
-                // Извлекаем числовое значение или 0, если совпадение не найдено
-                const numA = matchA ? parseInt(matchA[1], 10) : 0;
-                const numB = matchB ? parseInt(matchB[1], 10) : 0;
-
-                // Сравниваем числовые значения номеров
-                return numA - numB;
+                        return numA - numB;
+                    });
+                });
             });
-        });
-        articleData[template] = sortedArticles;
-    });
 
             populateTemplateList();
         }
@@ -151,7 +163,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         const urlsByArticle = articleData[templateName];
-        archiveTitle.textContent = `Альбом: ${templateName}`;
+        archiveTitle.textContent = `Альбом: ${templateName} (все артикулы)`;
         urlList.innerHTML = '';
 
         // Проходим по всем артикулам в каталоге
@@ -184,7 +196,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (articleName && articleData[templateName][articleName]) {
             // Показать только выбранный артикул
             const urls = articleData[templateName][articleName];
-            archiveTitle.textContent = `Каталог: ${templateName}, Артикул: ${articleName}`;
+            archiveTitle.textContent = `Альбом: ${templateName}, Артикул: ${articleName}`;
             urlList.innerHTML = '';
 
             urls.forEach(item => {
@@ -238,6 +250,8 @@ document.addEventListener('DOMContentLoaded', function() {
     function createUrlItem(item, articleName, templateName) {
         const urlItem = document.createElement('div');
         urlItem.className = 'url-item';
+        urlItem.setAttribute('data-article', articleName);
+        urlItem.setAttribute('data-template', templateName);
         urlItem.innerHTML = `
             <div class="preview-container">
                 <img
@@ -251,6 +265,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 >
             </div>
             <div class="url-content">
+                <span class="article-info">Артикул: ${articleName}</span>
                 <div class="url-text" data-url="${item.url}">
                     ${item.url}
                     <span class="copy-hint">🔗 Кликните чтобы скопировать</span>
@@ -446,6 +461,18 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         if (selectedTemplate) {
+            // Показываем информативное сообщение о том, что генерируется
+            let message = `Генерация документа для шаблона: ${selectedTemplate}`;
+            if (currentTemplate) {
+                message += `, альбом: ${currentTemplate}`;
+            }
+            if (currentArticle) {
+                message += `, артикул: ${currentArticle}`;
+            } else if (currentTemplate) {
+                message += `, все артикулы`;
+            }
+
+            showNotification(message, 'success');
             closeXLSXModal();
             downloadXLSXDocument(selectedTemplate, separator);
         } else {
@@ -565,49 +592,62 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    /**
+     * Получает текущие отображаемые данные из DOM
+     */
+    function getCurrentDisplayData() {
+        const currentData = [];
+        const urlItems = document.querySelectorAll('#urlList .url-item');
+
+        urlItems.forEach(urlItem => {
+            const articleElement = urlItem.querySelector('.article-info');
+            const urlElement = urlItem.querySelector('.url-text');
+            const filenameElement = urlItem.querySelector('small');
+
+            if (articleElement && urlElement) {
+                const article = articleElement.textContent.replace('Артикул: ', '').trim();
+                const url = urlElement.getAttribute('data-url');
+                const filename = filenameElement ? filenameElement.textContent : url.split('/').pop();
+
+                currentData.push({
+                    url: url,
+                    article: article,
+                    filename: filename
+                });
+            }
+        });
+
+        return currentData;
+    }
+
     function downloadXLSXDocument(selectedTemplateName, separator = 'comma') {
-        // Вместо сбора данных с DOM, используем глобальный imageData
-        // и фильтруем его в соответствии с текущим выбором (альбом/артикул)
-        let filteredData = imageData;
+        const currentData = getCurrentDisplayData();
 
-        if (!filteredData || !Array.isArray(filteredData)) {
-            showNotification('Нет исходных данных для генерации документа', 'error');
+        if (currentData.length === 0) {
+            showNotification('Нет данных для генерации документа', 'error');
             return;
         }
 
-        // Фильтрация по выбранному альбому (template)
-        if (currentTemplate) {
-            filteredData = filteredData.filter(item => item.template === currentTemplate);
-        }
-
-        // Фильтрация по выбранному артикулу (article)
-        if (currentArticle) {
-            filteredData = filteredData.filter(item => item.article === currentArticle);
-        }
-
-        if (filteredData.length === 0) {
-            showNotification('Нет данных для выбранного фильтра', 'error');
-            return;
-        }
-
-        // Применяем ту же логику сортировки, что и в processImageData
-        const sortedData = [...filteredData].sort((a, b) => {
-            // Сортировка по артикулу (как строке)
+        // Применяем сортировку к текущим данным
+        const sortedData = [...currentData].sort((a, b) => {
+            // Сортировка по артикулу
             if (a.article < b.article) return -1;
             if (a.article > b.article) return 1;
+
             // Если артикулы равны, сортировка по числовому порядковому номеру из имени файла
             const matchA = a.filename.match(/_(\d+)_[a-f0-9]+\.\w+$/);
             const matchB = b.filename.match(/_(\d+)_[a-f0-9]+\.\w+$/);
+
             const numA = matchA ? parseInt(matchA[1], 10) : 0;
             const numB = matchB ? parseInt(matchB[1], 10) : 0;
+
             return numA - numB;
         });
 
-        // Теперь sortedData содержит правильные данные в правильном порядке
-        // Формируем imageDataToSend из этой отсортированной структуры
+        // Формируем imageDataToSend из отсортированной структуры
         const imageDataToSend = sortedData.map(item => ({
             url: item.url,
-            article: item.article, // Используем артикул из исходных данных
+            article: item.article,
             filename: item.filename
         }));
 
@@ -616,15 +656,15 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        showNotification('Генерация XLSX документа для шаблона: ' + selectedTemplateName, 'success');
+        showNotification('Генерация XLSX документа...', 'success');
 
         fetch('/admin/download-xlsx', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                image_data: imageDataToSend, // Отправляем отсортированные данные
+                image_data: imageDataToSend, // Отправляем только текущие данные
                 template_name: selectedTemplateName,
-                separator: separator  // Добавляем разделитель
+                separator: separator
             })
         })
         .then(response => {
@@ -638,8 +678,23 @@ document.addEventListener('DOMContentLoaded', function() {
             const a = document.createElement('a');
             a.style.display = 'none';
             a.href = url;
+
+            // Формируем информативное имя файла
+            let filenameParts = [selectedTemplateName];
+
+            if (currentTemplate) {
+                filenameParts.push(currentTemplate);
+            }
+            if (currentArticle) {
+                filenameParts.push(currentArticle);
+            }
+
+            filenameParts.push(separator === 'newline' ? 'перенос' : 'запятые');
+
             const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-            a.download = `${selectedTemplateName}_${separator === 'newline' ? 'перенос' : 'запятые'}_${timestamp}.xlsx`;
+            const filename = `${filenameParts.join('_')}_${timestamp}.xlsx`;
+
+            a.download = filename;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
@@ -653,10 +708,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function deleteImage(imageUrl, urlItemElement) {
-        if (!confirm('Вы уверены, что хотите удалить это изображение? Файлы и миниатюры будут удалены безвозвратно.')) {
-            return;
-        }
-
         const deleteBtn = urlItemElement.querySelector('.delete-btn');
         const originalText = deleteBtn.innerHTML;
         deleteBtn.innerHTML = '⏳';

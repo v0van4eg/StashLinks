@@ -103,7 +103,10 @@ class BaseGenerator:
 
             print(f"Начинаем запись с строки {current_row}, артикулов: {len(articles)}")
 
-            for article, urls in articles.items():
+            # Сортируем артикулы по алфавиту
+            sorted_articles = sorted(articles.items(), key=lambda x: x[0])
+
+            for article, urls in sorted_articles:
                 row_data = self.generate_row_data(article, urls, template_name)
                 self.write_row_data(ws, current_row, row_data)
                 current_row += 1

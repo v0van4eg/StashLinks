@@ -339,6 +339,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+
     // Генерация XLSX документа
     function downloadXLSXDocument(selectedTemplateName, separator = 'comma') {
         const urlItems = document.querySelectorAll('.url-item');
@@ -347,8 +348,36 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        // Собираем данные и сразу сортируем
         const imageData = [];
-        document.querySelectorAll('.url-item').forEach(itemElement => {
+        const urlItemArray = Array.from(urlItems);
+
+        // Сортируем элементы по артикулу и порядковому номеру
+        urlItemArray.sort((a, b) => {
+            const articleA = a.querySelector('.article-info').textContent.replace('Артикул: ', '').trim();
+            const articleB = b.querySelector('.article-info').textContent.replace('Артикул: ', '').trim();
+
+            if (articleA !== articleB) {
+                return articleA.localeCompare(articleB);
+            }
+
+            // Если артикулы одинаковые, сортируем по порядковому номеру из URL
+            const urlA = a.querySelector('.url-text').getAttribute('data-url');
+            const urlB = b.querySelector('.url-text').getAttribute('data-url');
+            const filenameA = urlA.split('/').pop();
+            const filenameB = urlB.split('/').pop();
+
+            const matchA = filenameA.match(/_(\d+)_[a-f0-9]+\.\w+$/);
+            const matchB = filenameB.match(/_(\d+)_[a-f0-9]+\.\w+$/);
+
+            const numA = matchA ? parseInt(matchA[1], 10) : 0;
+            const numB = matchB ? parseInt(matchB[1], 10) : 0;
+
+            return numA - numB;
+        });
+
+        // Теперь собираем отсортированные данные
+        urlItemArray.forEach(itemElement => {
             const articleElement = itemElement.querySelector('.article-info');
             const urlElement = itemElement.querySelector('.url-text');
             if (articleElement && urlElement) {
@@ -426,9 +455,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Удаление изображения
     function deleteImage(imageUrl, urlItemElement) {
-        if (!confirm('Вы уверены, что хотите удалить это изображение? Файлы и миниатюры будут удалены безвозвратно.')) {
-            return;
-        }
+//        if (!confirm('Вы уверены, что хотите удалить это изображение? Файлы и миниатюры будут удалены безвозвратно.')) {
+//            return;
+//        }
 
         const deleteBtn = urlItemElement.querySelector('.delete-btn');
         const originalText = deleteBtn.innerHTML;
