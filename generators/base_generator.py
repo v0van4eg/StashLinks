@@ -1,6 +1,7 @@
 # generators/base_generator.py
 import io
 import os
+import re
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, Alignment
 from openpyxl.utils import get_column_letter
@@ -58,14 +59,32 @@ class BaseGenerator:
         raise NotImplementedError("Метод get_headers должен быть реализован в дочернем классе")
 
     def process_image_data(self, image_data):
-        """Группирует изображения по артикулам"""
+        """Группирует изображения по артикулам и сортирует по порядковому номеру"""
         articles = {}
         for item in image_data:
             article = item['article']
             if article not in articles:
                 articles[article] = []
             articles[article].append(item['url'])
+
+        # Сортировка URL внутри каждого артикула по порядковому номеру
+        for article, urls in articles.items():
+            urls.sort(key=lambda url: self._extract_order_number(url))
+
         return articles
+
+    def _extract_order_number(self, url):
+        """Извлекает порядковый номер из URL как число"""
+        filename = url.split('/')[-1]
+        # Ищем паттерн: артикул_номер_хеш.расширение
+        # Пример: 4296278785_2_ffe8e5.jpg -> извлекаем '2'
+        match = re.search(r'_(\d+)_[a-f0-9]+\.\w+$', filename)
+        if match:
+            try:
+                return int(match.group(1))  # Возвращаем как число
+            except ValueError:
+                return 0
+        return 0
 
     def generate(self, image_data, template_name):
         """Основной метод генерации документа"""

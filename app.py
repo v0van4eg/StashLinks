@@ -344,40 +344,22 @@ def hello():
     return render_template('hello.html')
 
 
-@app.route('/admin/download-links')
-def download_links():
-    urls = request.args.getlist('urls')
-    if not urls:
-        return "No URLs provided", 400
-
-    temp_file = f"temp_links_{uuid.uuid4().hex}.txt"
-    with open(temp_file, 'w', encoding='utf-8') as f:
-        f.write('\n'.join(urls))
-
-    return send_file(temp_file,
-                     as_attachment=True,
-                     download_name='image_links.txt',
-                     mimetype='text/plain')
-
-
+# app.py
+# Найдите маршрут @app.route('/admin/download-xlsx', methods=['POST'])
 @app.route('/admin/download-xlsx', methods=['POST'])
 def download_xlsx():
     try:
         data = request.get_json()
         if not data:
             return jsonify({'error': 'No data provided'}), 400
-
         image_data = data.get('image_data', [])
         # Получаем template_name из JSON данных запроса
         template_name = data.get('template_name', '')  # Изменено: client_name -> template_name
-
         if not image_data:
             return jsonify({'error': 'No image data provided'}), 400
-
         # Проверяем, что шаблон указан
         if not template_name:
             return jsonify({'error': 'Template name is required for XLSX generation'}), 400
-
         # Проверяем, что шаблон допустим
         if template_name not in Config.TEMPLATES:
             return jsonify({'error': f'Invalid template: {template_name}'}), 400
@@ -385,16 +367,36 @@ def download_xlsx():
         print(
             f"Генерация XLSX для шаблона: {template_name}, элементов: {len(image_data)}")  # Изменено: клиента -> шаблона
 
-        # Передаем template_name вместо client_name
-        xlsx_buffer = generate_xlsx_document(image_data, template_name)  # Изменено: client_name -> template_name
+        # --- ИСПРАВЛЕННАЯ ФУНКЦИЯ СОРТИРОВКИ ---
+        def sort_key(item):
+            # Извлекаем порядковый номер из имени файла URL
+            filename_from_url = item['url'].split('/')[-1]
 
+            # Ищем паттерн: артикул_номер_хеш.расширение
+            # Пример: 4296278785_2_ffe8e5.jpg -> извлекаем '2'
+            match = re.search(r'_(\d+)_[a-f0-9]+\.\w+$', filename_from_url)
+            if match:
+                try:
+                    order_num = int(match.group(1))  # Порядковый номер как число
+                except ValueError:
+                    order_num = 0
+            else:
+                order_num = 0
+
+            # Сортируем по article (как строке), затем по порядковому номеру (как числу)
+            return (item['article'], order_num)
+
+        image_data.sort(key=sort_key)
+        # --- /ИСПРАВЛЕННАЯ ФУНКЦИЯ СОРТИРОВКИ ---
+
+        # Передаем отсортированные image_data и template_name
+        xlsx_buffer = generate_xlsx_document(image_data, template_name)  # Изменено: client_name -> template_name
         # Используем template_name для имени файла
         filename = f"{safe_folder_name(template_name)}_images.xlsx"  # Изменено: client_name -> template_name
-
+        # ... (остальная часть функции download_xlsx без изменений)
         with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx', mode='w+b') as temp_file:
             temp_file.write(xlsx_buffer.getvalue())
             temp_file_path = temp_file.name
-
         try:
             response = send_file(
                 temp_file_path,
@@ -409,7 +411,6 @@ def download_xlsx():
                     os.remove(temp_file_path)
             except Exception as e:
                 print(f"Ошибка при удалении временного файла: {e}")
-
     except Exception as e:
         app.logger.error(f"Error generating XLSX: {str(e)}")
         return jsonify({'error': f'Ошибка при генерации XLSX-файла: {str(e)}'}), 500
@@ -440,17 +441,14 @@ def archive():
                             # Генерируем URL для изображения, соответствующий Nginx
                             # Изменено: используем template_folder вместо client_folder
                             image_url = f"{Config.BASE_URL}/images/{quote(template_folder, safe='')}/{quote(article_folder, safe='')}/{quote(filename, safe='')}"  # Изменено: client_folder -> template_folder
-
                             # Ищем соответствующую миниатюру
                             file_name_base = os.path.splitext(filename)[0]
                             thumb_filename = f"{file_name_base}_thumb.jpg"
                             thumb_path = os.path.join(article_path, thumb_filename)
                             thumbnail_url = image_url  # По умолчанию используем оригинал
-
                             if os.path.exists(thumb_path):
                                 # Если миниатюра существует, используем её URL
                                 thumbnail_url = f"{Config.BASE_URL}/images/{quote(template_folder, safe='')}/{quote(article_folder, safe='')}/{quote(thumb_filename, safe='')}"
-
                             image_data.append({
                                 'url': image_url,
                                 'article': article_folder,
@@ -459,9 +457,26 @@ def archive():
                                 'thumbnail_url': thumbnail_url
                             })
 
-    # Сортировка (опционально) для лучшего отображения
-    image_data.sort(
-        key=lambda x: (x['template'], x['article'], x['filename']))  # Изменено: x['client'] -> x['template']
+    # --- ИСПРАВЛЕННАЯ ФУНКЦИЯ СОРТИРОВКИ ---
+    def sort_key(item):
+        # Извлекаем порядковый номер из имени файла
+        # Ожидаемый формат: <артикул>_<номер>_<хеш>.<расширение>
+        # Пример: 4296278785_2_ffe8e5.jpg -> извлекаем '2'
+        match = re.search(r'_(\d+)_[a-f0-9]+\.\w+$', item['filename'])
+        if match:
+            try:
+                order_num = int(match.group(1))  # Порядковый номер как число
+            except ValueError:
+                order_num = 0
+        else:
+            order_num = 0
+
+        # Сортируем по template, article (как строки), затем по порядковому номеру (как число)
+        return (item['template'], item['article'], order_num)
+
+    image_data.sort(key=sort_key)
+    # --- /ИСПРАВЛЕННАЯ ФУНКЦИЯ СОРТИРОВКИ ---
+
     print(f"Собрано image_data для архива: {len(image_data)} элементов")  # Для отладки
     # Рендерим шаблон archive.html
     return render_template('archive.html', image_data=image_data, error='')
