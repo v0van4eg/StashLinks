@@ -100,7 +100,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function populateTemplateList() {
-        templateSelect.innerHTML = '<option value="">-- Выберите каталог --</option>';
+        templateSelect.innerHTML = '<option value="">-- Выберите альбом --</option>';
         Object.keys(articleData).forEach(templateName => {
             const option = document.createElement('option');
             option.value = templateName;
@@ -136,7 +136,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         const urlsByArticle = articleData[templateName];
-        archiveTitle.textContent = `Каталог: ${templateName}`;
+        archiveTitle.textContent = `Альбом: ${templateName}`;
         urlList.innerHTML = '';
 
         // Проходим по всем артикулам в каталоге
@@ -489,7 +489,7 @@ document.addEventListener('DOMContentLoaded', function() {
             a.style.display = 'none';
             a.href = url;
             const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-            a.download = `${selectedTemplateName}_catalog_${timestamp}.xlsx`;
+            a.download = `${selectedTemplateName}_album_${timestamp}.xlsx`;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
