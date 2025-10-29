@@ -7,6 +7,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const confirmXLSXBtn = document.getElementById('confirmXLSXBtn');
     const cancelXLSXBtn = document.getElementById('cancelXLSXBtn');
     const templateSelectForXLSX = document.getElementById('templateSelectForXLSX');
+    const separatorSection = document.getElementById('separatorSection');
+    const separatorSelect = document.getElementById('separatorSelect');
     const templateSelect = document.getElementById('templateSelect');
     const articleSelect = document.getElementById('articleSelect');
     const urlList = document.getElementById('urlList');
@@ -264,6 +266,17 @@ document.addEventListener('DOMContentLoaded', function() {
             cancelXLSXBtn.addEventListener('click', closeXLSXModal);
         }
 
+        // Обработчик изменения выбора шаблона в модальном окне
+        if (templateSelectForXLSX) {
+            templateSelectForXLSX.addEventListener('change', function() {
+                if (this.value === 'В ячейку') {
+                    separatorSection.style.display = 'block';
+                } else {
+                    separatorSection.style.display = 'none';
+                }
+            });
+        }
+
         // Кнопки копирования
         if (copyAllBtn) copyAllBtn.addEventListener('click', copyAllToClipboard);
         if (copyAllListBtn) copyAllListBtn.addEventListener('click', copyAllListToClipboard);
@@ -307,13 +320,21 @@ document.addEventListener('DOMContentLoaded', function() {
     function closeXLSXModal() {
         xlsxModal.style.display = 'none';
         templateSelectForXLSX.value = '';
+        separatorSection.style.display = 'none';
+        separatorSelect.value = 'comma';
     }
 
     function handleXLSXGeneration() {
         const selectedTemplate = templateSelectForXLSX.value;
+        let separator = 'comma'; // по умолчанию
+
+        if (selectedTemplate === 'В ячейку') {
+            separator = separatorSelect.value;
+        }
+
         if (selectedTemplate) {
             closeXLSXModal();
-            downloadXLSXDocument(selectedTemplate);
+            downloadXLSXDocument(selectedTemplate, separator);
         } else {
             showNotification('Пожалуйста, выберите шаблон.', 'error');
         }
@@ -430,95 +451,92 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function downloadXLSXDocument(selectedTemplateName, separator = 'comma') {
+        // Вместо сбора данных с DOM, используем глобальный imageData
+        // и фильтруем его в соответствии с текущим выбором (альбом/артикул)
+        let filteredData = imageData;
 
-
-        function downloadXLSXDocument(selectedTemplateName) {
-            // Вместо сбора данных с DOM, используем глобальный imageData
-            // и фильтруем его в соответствии с текущим выбором (альбом/артикул)
-            let filteredData = imageData;
-
-            if (!filteredData || !Array.isArray(filteredData)) {
-                showNotification('Нет исходных данных для генерации документа', 'error');
-                return;
-            }
-
-            // Фильтрация по выбранному альбому (template)
-            if (currentTemplate) {
-                filteredData = filteredData.filter(item => item.template === currentTemplate);
-            }
-
-            // Фильтрация по выбранному артикулу (article)
-            if (currentArticle) {
-                filteredData = filteredData.filter(item => item.article === currentArticle);
-            }
-
-            if (filteredData.length === 0) {
-                showNotification('Нет данных для выбранного фильтра', 'error');
-                return;
-            }
-
-            // Применяем ту же логику сортировки, что и в processImageData
-            const sortedData = [...filteredData].sort((a, b) => {
-                // Сортировка по артикулу (как строке)
-                if (a.article < b.article) return -1;
-                if (a.article > b.article) return 1;
-                // Если артикулы равны, сортировка по числовому порядковому номеру из имени файла
-                const matchA = a.filename.match(/_(\d+)_[a-f0-9]+\.\w+$/);
-                const matchB = b.filename.match(/_(\d+)_[a-f0-9]+\.\w+$/);
-                const numA = matchA ? parseInt(matchA[1], 10) : 0;
-                const numB = matchB ? parseInt(matchB[1], 10) : 0;
-                return numA - numB;
-            });
-
-            // Теперь sortedData содержит правильные данные в правильном порядке
-            // Формируем imageDataToSend из этой отсортированной структуры
-            const imageDataToSend = sortedData.map(item => ({
-                url: item.url,
-                article: item.article, // Используем артикул из исходных данных
-                filename: item.filename
-            }));
-
-            if (!selectedTemplateName.trim()) {
-                showNotification('Имя шаблона пустое. Невозможно выбрать шаблон.', 'error');
-                return;
-            }
-
-            showNotification('Генерация XLSX документа для шаблона: ' + selectedTemplateName, 'success');
-
-            fetch('/admin/download-xlsx', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    image_data: imageDataToSend, // Отправляем отсортированные данные
-                    template_name: selectedTemplateName
-                })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(err => { throw new Error(err.error || 'Ошибка сервера') });
-                }
-                return response.blob();
-            })
-            .then(blob => {
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = url;
-                const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-                a.download = `${selectedTemplateName}_album_${timestamp}.xlsx`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-                showNotification('XLSX документ успешно сгенерирован и скачан!', 'success');
-            })
-            .catch(error => {
-                console.error('Ошибка при генерации XLSX:', error);
-                showNotification('Ошибка при генерации XLSX: ' + error.message, 'error');
-            });
+        if (!filteredData || !Array.isArray(filteredData)) {
+            showNotification('Нет исходных данных для генерации документа', 'error');
+            return;
         }
 
+        // Фильтрация по выбранному альбому (template)
+        if (currentTemplate) {
+            filteredData = filteredData.filter(item => item.template === currentTemplate);
+        }
 
+        // Фильтрация по выбранному артикулу (article)
+        if (currentArticle) {
+            filteredData = filteredData.filter(item => item.article === currentArticle);
+        }
+
+        if (filteredData.length === 0) {
+            showNotification('Нет данных для выбранного фильтра', 'error');
+            return;
+        }
+
+        // Применяем ту же логику сортировки, что и в processImageData
+        const sortedData = [...filteredData].sort((a, b) => {
+            // Сортировка по артикулу (как строке)
+            if (a.article < b.article) return -1;
+            if (a.article > b.article) return 1;
+            // Если артикулы равны, сортировка по числовому порядковому номеру из имени файла
+            const matchA = a.filename.match(/_(\d+)_[a-f0-9]+\.\w+$/);
+            const matchB = b.filename.match(/_(\d+)_[a-f0-9]+\.\w+$/);
+            const numA = matchA ? parseInt(matchA[1], 10) : 0;
+            const numB = matchB ? parseInt(matchB[1], 10) : 0;
+            return numA - numB;
+        });
+
+        // Теперь sortedData содержит правильные данные в правильном порядке
+        // Формируем imageDataToSend из этой отсортированной структуры
+        const imageDataToSend = sortedData.map(item => ({
+            url: item.url,
+            article: item.article, // Используем артикул из исходных данных
+            filename: item.filename
+        }));
+
+        if (!selectedTemplateName.trim()) {
+            showNotification('Имя шаблона пустое. Невозможно выбрать шаблон.', 'error');
+            return;
+        }
+
+        showNotification('Генерация XLSX документа для шаблона: ' + selectedTemplateName, 'success');
+
+        fetch('/admin/download-xlsx', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                image_data: imageDataToSend, // Отправляем отсортированные данные
+                template_name: selectedTemplateName,
+                separator: separator  // Добавляем разделитель
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => { throw new Error(err.error || 'Ошибка сервера') });
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+            a.download = `${selectedTemplateName}_${separator === 'newline' ? 'перенос' : 'запятые'}_${timestamp}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            showNotification('XLSX документ успешно сгенерирован и скачан!', 'success');
+        })
+        .catch(error => {
+            console.error('Ошибка при генерации XLSX:', error);
+            showNotification('Ошибка при генерации XLSX: ' + error.message, 'error');
+        });
+    }
 
     function deleteImage(imageUrl, urlItemElement) {
         if (!confirm('Вы уверены, что хотите удалить это изображение? Файлы и миниатюры будут удалены безвозвратно.')) {

@@ -4,13 +4,10 @@ from .yandexmarket_generator import YandexmarketGenerator
 
 class GeneratorFactory:
     @staticmethod
-    def create_generator(template_name):
+    def create_generator(template_name, separator='comma'):
         if template_name == 'В строку':
             return MegamarketGenerator()
         elif template_name == 'В ячейку':
-            return YandexmarketGenerator()
+            return YandexmarketGenerator(separator)
         else:
             raise ValueError(f"Unknown template: {template_name}")
-
-# Экспортируйте фабрику
-__all__ = ['GeneratorFactory']

@@ -19,6 +19,16 @@
                 <option value="В строку">В строку</option>
                 <option value="В ячейку">В ячейку</option>
             </select>
+
+            <!-- Добавляем выбор разделителя (только для "В ячейку") -->
+            <div id="separatorSection" style="display: none; margin-top: 15px;">
+                <label for="separatorSelect">Разделитель ссылок:</label>
+                <select id="separatorSelect">
+                    <option value="comma">Запятая</option>
+                    <option value="newline">Перенос строки</option>
+                </select>
+            </div>
+
             <button id="confirmXLSXBtn" class="btn">Сгенерировать</button>
             <button id="cancelXLSXBtn" class="btn btn-secondary">Отмена</button>
         </div>

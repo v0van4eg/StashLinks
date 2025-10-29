@@ -10,8 +10,9 @@ from openpyxl.utils import get_column_letter
 class BaseGenerator:
     """Базовый класс для генерации XLSX документов"""
 
-    def __init__(self, template_name=None):
+    def __init__(self, template_name=None, separator='comma'):
         self.template_name = template_name
+        self.separator = separator  # Добавляем разделитель
         # Используем путь из конфига, если шаблон указан
         if template_name:
             from config import Config
@@ -57,6 +58,11 @@ class BaseGenerator:
     def get_headers(self):
         """Возвращает заголовки столбцов"""
         raise NotImplementedError("Метод get_headers должен быть реализован в дочернем классе")
+
+    def get_separator(self):
+        """Возвращает символ разделителя"""
+        from config import Config
+        return Config.SEPARATOR_OPTIONS.get(self.separator, Config.SEPARATOR_OPTIONS[Config.DEFAULT_SEPARATOR])
 
     def process_image_data(self, image_data):
         """Группирует изображения по артикулам и сортирует по порядковому номеру"""

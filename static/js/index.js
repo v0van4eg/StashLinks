@@ -7,6 +7,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const confirmXLSXBtn = document.getElementById('confirmXLSXBtn');
     const cancelXLSXBtn = document.getElementById('cancelXLSXBtn');
     const templateSelectForXLSX = document.getElementById('templateSelectForXLSX');
+    const separatorSection = document.getElementById('separatorSection');
+    const separatorSelect = document.getElementById('separatorSelect');
     const copyAllBtn = document.getElementById('copyAllBtn');
     const copyAllListBtn = document.getElementById('copyAllListBtn');
     const archiveInput = document.getElementById('archive');
@@ -42,6 +44,17 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (cancelXLSXBtn) {
             cancelXLSXBtn.addEventListener('click', closeXLSXModal);
+        }
+
+        // Обработчик изменения выбора шаблона
+        if (templateSelectForXLSX) {
+            templateSelectForXLSX.addEventListener('change', function() {
+                if (this.value === 'В ячейку') {
+                    separatorSection.style.display = 'block';
+                } else {
+                    separatorSection.style.display = 'none';
+                }
+            });
         }
 
         // Копирование ссылок
@@ -81,14 +94,22 @@ document.addEventListener('DOMContentLoaded', function() {
     function closeXLSXModal() {
         xlsxModal.style.display = 'none';
         templateSelectForXLSX.value = '';
+        separatorSection.style.display = 'none';
+        separatorSelect.value = 'comma';
     }
 
     // Обработка генерации XLSX
     function handleXLSXGeneration() {
         const selectedTemplate = templateSelectForXLSX.value;
+        let separator = 'comma'; // по умолчанию
+
+        if (selectedTemplate === 'В ячейку') {
+            separator = separatorSelect.value;
+        }
+
         if (selectedTemplate) {
             closeXLSXModal();
-            downloadXLSXDocument(selectedTemplate);
+            downloadXLSXDocument(selectedTemplate, separator);
         } else {
             showNotification('Пожалуйста, выберите шаблон.', 'error');
         }
@@ -207,7 +228,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Генерация XLSX документа
-    function downloadXLSXDocument(selectedTemplateName) {
+    function downloadXLSXDocument(selectedTemplateName, separator = 'comma') {
         const urlItems = document.querySelectorAll('.url-item');
         if (!urlItems.length) {
             showNotification('Нет ссылок для генерации документа', 'error');
@@ -240,7 +261,8 @@ document.addEventListener('DOMContentLoaded', function() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 image_data: imageData,
-                template_name: selectedTemplateName
+                template_name: selectedTemplateName,
+                separator: separator  // Добавляем разделитель
             })
         })
         .then(response => {
@@ -255,7 +277,7 @@ document.addEventListener('DOMContentLoaded', function() {
             a.style.display = 'none';
             a.href = url;
             const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-            a.download = `${selectedTemplateName}_album_${timestamp}.xlsx`;
+            a.download = `${selectedTemplateName}_${separator === 'newline' ? 'перенос' : 'запятые'}_${timestamp}.xlsx`;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);

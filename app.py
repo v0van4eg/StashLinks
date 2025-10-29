@@ -344,28 +344,27 @@ def hello():
     return render_template('hello.html')
 
 
-# app.py
-# Найдите маршрут @app.route('/admin/download-xlsx', methods=['POST'])
 @app.route('/admin/download-xlsx', methods=['POST'])
 def download_xlsx():
     try:
         data = request.get_json()
         if not data:
             return jsonify({'error': 'No data provided'}), 400
+
         image_data = data.get('image_data', [])
-        # Получаем template_name из JSON данных запроса
-        template_name = data.get('template_name', '')  # Изменено: client_name -> template_name
+        template_name = data.get('template_name', '')
+        separator = data.get('separator', 'comma')  # Получаем разделитель
+
         if not image_data:
             return jsonify({'error': 'No image data provided'}), 400
-        # Проверяем, что шаблон указан
+
         if not template_name:
             return jsonify({'error': 'Template name is required for XLSX generation'}), 400
-        # Проверяем, что шаблон допустим
+
         if template_name not in Config.TEMPLATES:
             return jsonify({'error': f'Invalid template: {template_name}'}), 400
 
-        print(
-            f"Генерация XLSX для шаблона: {template_name}, элементов: {len(image_data)}")  # Изменено: клиента -> шаблона
+        print(f"Генерация XLSX для шаблона: {template_name}, разделитель: {separator}")
 
         # --- ИСПРАВЛЕННАЯ ФУНКЦИЯ СОРТИРОВКИ ---
         def sort_key(item):
@@ -389,11 +388,14 @@ def download_xlsx():
         image_data.sort(key=sort_key)
         # --- /ИСПРАВЛЕННАЯ ФУНКЦИЯ СОРТИРОВКИ ---
 
-        # Передаем отсортированные image_data и template_name
-        xlsx_buffer = generate_xlsx_document(image_data, template_name)  # Изменено: client_name -> template_name
-        # Используем template_name для имени файла
-        filename = f"{safe_folder_name(template_name)}_images.xlsx"  # Изменено: client_name -> template_name
-        # ... (остальная часть функции download_xlsx без изменений)
+        # Передаем отсортированные image_data и template_name и разделитель
+        generator = GeneratorFactory.create_generator(template_name, separator)
+        xlsx_buffer = generator.generate(image_data, template_name)
+
+        # Обновляем имя файла с учетом разделителя
+        separator_suffix = "_перенос" if separator == 'newline' else "_запятые"
+        filename = f"{safe_folder_name(template_name)}{separator_suffix}_images.xlsx"
+
         with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx', mode='w+b') as temp_file:
             temp_file.write(xlsx_buffer.getvalue())
             temp_file_path = temp_file.name
@@ -415,6 +417,8 @@ def download_xlsx():
         app.logger.error(f"Error generating XLSX: {str(e)}")
         return jsonify({'error': f'Ошибка при генерации XLSX-файла: {str(e)}'}), 500
 
+
+# ... весь остальной код без изменений ...
 
 @app.route('/admin/archive')
 def archive():

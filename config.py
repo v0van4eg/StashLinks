@@ -1,6 +1,7 @@
 # config.py
 import os
 
+
 class Config:
     SECRET_KEY = 'your-secret-key-here'
     UPLOAD_FOLDER = 'uploads'
@@ -23,9 +24,19 @@ class Config:
         # Убедитесь, что имена ключей соответствуют именам в TEMPLATES
     }
 
+    # Настройки разделителей для шаблона "В ячейку"
+    SEPARATOR_OPTIONS = {
+        'comma': ', ',
+        'newline': '\n'
+    }
+
+    # Разделитель по умолчанию
+    DEFAULT_SEPARATOR = 'comma'
+
     # Убедимся, что папки существуют
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-    os.makedirs(RESULTS_FOLDER, exist_ok=True) # <-- Добавляем создание папки результатов
+    os.makedirs(RESULTS_FOLDER, exist_ok=True)  # <-- Добавляем создание папки результатов
+
 
 def allowed_file(filename):
     # Разрешаем файлы миниатюр
