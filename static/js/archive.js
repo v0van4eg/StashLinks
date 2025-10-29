@@ -18,6 +18,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const copyAllListBtn = document.getElementById('copyAllListBtn');
     const showAllBtn = document.getElementById('showAllBtn');
 
+    // Элементы модального окна изображений
+    const imageModal = document.getElementById('imageModal');
+    const imageModalImg = document.getElementById('imageModalImg');
+    const imageModalClose = document.getElementById('imageModalClose');
+    const imageModalPrev = document.getElementById('imageModalPrev');
+    const imageModalNext = document.getElementById('imageModalNext');
+    const imageModalFilename = document.getElementById('imageModalFilename');
+    const imageModalUrl = document.getElementById('imageModalUrl');
+
+    // Переменные для навигации по изображениям
+    let currentImageIndex = 0;
+    let allImages = [];
+
     // Данные и состояние
     let articleData = {};
     let currentTemplate = '';
@@ -81,7 +94,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Сортировка изображений внутри артикула по числовому порядковому номеру
             sortedArticles[article] = articleData[template][article].sort((a, b) => {
                 // Извлекаем порядковый номер из имени файла
-                // Ожидаемый формат: <артикул>_<номер>_<хеш>.<расширение>
+                // Ожидаемый формат: <артикул>_<номер>_<хеш>.<расширование>
                 // Пример: 4296278785_2_ffe8e5.jpg -> извлекаем '2'
                 const matchA = a.filename.match(/_(\d+)_[a-f0-9]+\.\w+$/);
                 const matchB = b.filename.match(/_(\d+)_[a-f0-9]+\.\w+$/);
@@ -232,6 +245,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     alt="Preview ${item.filename}"
                     class="image-preview"
                     loading="lazy"
+                    data-original-src="${item.url}"
+                    data-filename="${item.filename}"
                     onerror="this.onerror=null; this.src='${item.url}';"
                 >
             </div>
@@ -281,10 +296,108 @@ document.addEventListener('DOMContentLoaded', function() {
         if (copyAllBtn) copyAllBtn.addEventListener('click', copyAllToClipboard);
         if (copyAllListBtn) copyAllListBtn.addEventListener('click', copyAllListToClipboard);
 
+        // Клик по превью изображений
+        document.addEventListener('click', handleImagePreviewClick);
+
         // Общие обработчики
         document.addEventListener('click', handleUrlClick);
         document.addEventListener('click', handleDeleteClick);
         window.addEventListener('click', handleWindowClick);
+
+        // Обработчики для модального окна изображений
+        if (imageModalClose) {
+            imageModalClose.addEventListener('click', closeImageModal);
+        }
+        if (imageModalPrev) {
+            imageModalPrev.addEventListener('click', showPrevImage);
+        }
+        if (imageModalNext) {
+            imageModalNext.addEventListener('click', showNextImage);
+        }
+
+        // Навигация по клавиатуре
+        document.addEventListener('keydown', handleKeyboardNavigation);
+    }
+
+    // Функции для модального окна изображений
+    function openImageModal(imageIndex) {
+        if (!allImages.length) return;
+
+        currentImageIndex = imageIndex;
+        const image = allImages[currentImageIndex];
+
+        imageModalImg.src = image.originalSrc;
+        imageModalFilename.textContent = image.filename;
+        imageModalUrl.textContent = image.originalSrc;
+
+        imageModal.style.display = 'block';
+        document.body.style.overflow = 'hidden'; // Блокируем прокрутку страницы
+
+        updateNavigationButtons();
+    }
+
+    function closeImageModal() {
+        imageModal.style.display = 'none';
+        document.body.style.overflow = ''; // Восстанавливаем прокрутку
+    }
+
+    function showPrevImage() {
+        if (currentImageIndex > 0) {
+            currentImageIndex--;
+            openImageModal(currentImageIndex);
+        }
+    }
+
+    function showNextImage() {
+        if (currentImageIndex < allImages.length - 1) {
+            currentImageIndex++;
+            openImageModal(currentImageIndex);
+        }
+    }
+
+    function updateNavigationButtons() {
+        if (imageModalPrev) {
+            imageModalPrev.style.display = currentImageIndex > 0 ? 'block' : 'none';
+        }
+        if (imageModalNext) {
+            imageModalNext.style.display = currentImageIndex < allImages.length - 1 ? 'block' : 'none';
+        }
+    }
+
+    function handleKeyboardNavigation(event) {
+        if (imageModal.style.display === 'block') {
+            switch(event.key) {
+                case 'Escape':
+                    closeImageModal();
+                    break;
+                case 'ArrowLeft':
+                    showPrevImage();
+                    break;
+                case 'ArrowRight':
+                    showNextImage();
+                    break;
+            }
+        }
+    }
+
+    function handleImagePreviewClick(e) {
+        if (e.target.classList.contains('image-preview')) {
+            // Собираем все изображения на странице
+            allImages = Array.from(document.querySelectorAll('.image-preview')).map((img, index) => ({
+                originalSrc: img.getAttribute('data-original-src') || img.src,
+                filename: img.getAttribute('data-filename') || 'Изображение',
+                index: index
+            }));
+
+            // Находим индекс текущего изображения
+            const clickedIndex = allImages.findIndex(img =>
+                img.originalSrc === (e.target.getAttribute('data-original-src') || e.target.src)
+            );
+
+            if (clickedIndex !== -1) {
+                openImageModal(clickedIndex);
+            }
+        }
     }
 
     function handleTemplateChange() {
@@ -342,6 +455,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function handleWindowClick(event) {
         if (event.target === xlsxModal) closeXLSXModal();
+        if (event.target === imageModal) closeImageModal();
     }
 
     function showNotification(message, type = 'success') {

@@ -34,6 +34,18 @@
         </div>
     </div>
 
+    <!-- Модальное окно для просмотра изображений -->
+    <div id="imageModal" class="image-modal">
+        <span class="image-modal-close" id="imageModalClose">&times;</span>
+        <button class="image-modal-nav image-modal-prev" id="imageModalPrev">&#10094;</button>
+        <button class="image-modal-nav image-modal-next" id="imageModalNext">&#10095;</button>
+        <img class="image-modal-content" id="imageModalImg">
+        <div class="image-modal-info">
+            <div class="image-modal-filename" id="imageModalFilename"></div>
+            <div class="image-modal-url" id="imageModalUrl"></div>
+        </div>
+    </div>
+
     <!-- Основной контейнер для всей страницы -->
     <div class="page-container">
         <!-- Контейнер для основного контента (до футера) -->
@@ -97,6 +109,8 @@
                                         alt="Preview {{ item.filename }}"
                                         class="image-preview"
                                         loading="lazy"
+                                        data-original-src="{{ item.url }}"
+                                        data-filename="{{ item.filename }}"
                                         onerror="this.onerror=null; this.src='{{ item.url }}';"
                                     >
                                 </div>

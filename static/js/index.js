@@ -13,6 +13,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const copyAllListBtn = document.getElementById('copyAllListBtn');
     const archiveInput = document.getElementById('archive');
 
+    // Элементы модального окна изображений
+    const imageModal = document.getElementById('imageModal');
+    const imageModalImg = document.getElementById('imageModalImg');
+    const imageModalClose = document.getElementById('imageModalClose');
+    const imageModalPrev = document.getElementById('imageModalPrev');
+    const imageModalNext = document.getElementById('imageModalNext');
+    const imageModalFilename = document.getElementById('imageModalFilename');
+    const imageModalUrl = document.getElementById('imageModalUrl');
+
+    // Переменные для навигации по изображениям
+    let currentImageIndex = 0;
+    let allImages = [];
+
     // Инициализация темы
     initTheme();
 
@@ -64,6 +77,9 @@ document.addEventListener('DOMContentLoaded', function() {
         // Клик по ссылкам для копирования
         document.addEventListener('click', handleUrlClick);
 
+        // Клик по превью изображений
+        document.addEventListener('click', handleImagePreviewClick);
+
         // Кнопки удаления
         document.addEventListener('click', handleDeleteClick);
 
@@ -75,7 +91,22 @@ document.addEventListener('DOMContentLoaded', function() {
         // Закрытие модального окна при клике вне его
         window.addEventListener('click', (event) => {
             if (event.target === xlsxModal) closeXLSXModal();
+            if (event.target === imageModal) closeImageModal();
         });
+
+        // Обработчики для модального окна изображений
+        if (imageModalClose) {
+            imageModalClose.addEventListener('click', closeImageModal);
+        }
+        if (imageModalPrev) {
+            imageModalPrev.addEventListener('click', showPrevImage);
+        }
+        if (imageModalNext) {
+            imageModalNext.addEventListener('click', showNextImage);
+        }
+
+        // Навигация по клавиатуре
+        document.addEventListener('keydown', handleKeyboardNavigation);
     }
 
     // Переключение темы
@@ -112,6 +143,87 @@ document.addEventListener('DOMContentLoaded', function() {
             downloadXLSXDocument(selectedTemplate, separator);
         } else {
             showNotification('Пожалуйста, выберите шаблон.', 'error');
+        }
+    }
+
+    // Функции для модального окна изображений
+    function openImageModal(imageIndex) {
+        if (!allImages.length) return;
+
+        currentImageIndex = imageIndex;
+        const image = allImages[currentImageIndex];
+
+        imageModalImg.src = image.originalSrc;
+        imageModalFilename.textContent = image.filename;
+        imageModalUrl.textContent = image.originalSrc;
+
+        imageModal.style.display = 'block';
+        document.body.style.overflow = 'hidden'; // Блокируем прокрутку страницы
+
+        updateNavigationButtons();
+    }
+
+    function closeImageModal() {
+        imageModal.style.display = 'none';
+        document.body.style.overflow = ''; // Восстанавливаем прокрутку
+    }
+
+    function showPrevImage() {
+        if (currentImageIndex > 0) {
+            currentImageIndex--;
+            openImageModal(currentImageIndex);
+        }
+    }
+
+    function showNextImage() {
+        if (currentImageIndex < allImages.length - 1) {
+            currentImageIndex++;
+            openImageModal(currentImageIndex);
+        }
+    }
+
+    function updateNavigationButtons() {
+        if (imageModalPrev) {
+            imageModalPrev.style.display = currentImageIndex > 0 ? 'block' : 'none';
+        }
+        if (imageModalNext) {
+            imageModalNext.style.display = currentImageIndex < allImages.length - 1 ? 'block' : 'none';
+        }
+    }
+
+    function handleKeyboardNavigation(event) {
+        if (imageModal.style.display === 'block') {
+            switch(event.key) {
+                case 'Escape':
+                    closeImageModal();
+                    break;
+                case 'ArrowLeft':
+                    showPrevImage();
+                    break;
+                case 'ArrowRight':
+                    showNextImage();
+                    break;
+            }
+        }
+    }
+
+    function handleImagePreviewClick(e) {
+        if (e.target.classList.contains('image-preview')) {
+            // Собираем все изображения на странице
+            allImages = Array.from(document.querySelectorAll('.image-preview')).map((img, index) => ({
+                originalSrc: img.getAttribute('data-original-src') || img.src,
+                filename: img.getAttribute('data-filename') || 'Изображение',
+                index: index
+            }));
+
+            // Находим индекс текущего изображения
+            const clickedIndex = allImages.findIndex(img =>
+                img.originalSrc === (e.target.getAttribute('data-original-src') || e.target.src)
+            );
+
+            if (clickedIndex !== -1) {
+                openImageModal(clickedIndex);
+            }
         }
     }
 
