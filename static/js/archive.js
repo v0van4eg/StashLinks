@@ -430,77 +430,95 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function downloadXLSXDocument(selectedTemplateName) {
-        const urlItems = document.querySelectorAll('#urlList .url-item');
-        if (!urlItems.length) {
-            showNotification('Нет ссылок для генерации документа', 'error');
-            return;
-        }
 
-        const imageDataToSend = [];
-        urlItems.forEach(itemElement => {
-            const articleElement = itemElement.querySelector('.article-info');
-            const urlElement = itemElement.querySelector('.url-text');
-            let article = '';
 
-            if (articleElement) {
-                const text = articleElement.textContent;
-                const match = text.match(/Артикул: ([^,]+)/);
-                if (match) {
-                    article = match[1].trim();
-                }
-            } else {
-                article = archiveTitle.textContent.replace('Артикул: ', '').trim();
+        function downloadXLSXDocument(selectedTemplateName) {
+            // Вместо сбора данных с DOM, используем глобальный imageData
+            // и фильтруем его в соответствии с текущим выбором (альбом/артикул)
+            let filteredData = imageData;
+
+            if (!filteredData || !Array.isArray(filteredData)) {
+                showNotification('Нет исходных данных для генерации документа', 'error');
+                return;
             }
 
-            if (urlElement) {
-                imageDataToSend.push({
-                    url: urlElement.getAttribute('data-url'),
-                    article: article,
-                    filename: urlElement.getAttribute('data-url').split('/').pop()
-                });
+            // Фильтрация по выбранному альбому (template)
+            if (currentTemplate) {
+                filteredData = filteredData.filter(item => item.template === currentTemplate);
             }
-        });
 
-        if (!selectedTemplateName.trim()) {
-            showNotification('Имя шаблона пустое. Невозможно выбрать шаблон.', 'error');
-            return;
-        }
+            // Фильтрация по выбранному артикулу (article)
+            if (currentArticle) {
+                filteredData = filteredData.filter(item => item.article === currentArticle);
+            }
 
-        showNotification('Генерация XLSX документа для шаблона: ' + selectedTemplateName, 'success');
+            if (filteredData.length === 0) {
+                showNotification('Нет данных для выбранного фильтра', 'error');
+                return;
+            }
 
-        fetch('/admin/download-xlsx', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                image_data: imageDataToSend,
-                template_name: selectedTemplateName
+            // Применяем ту же логику сортировки, что и в processImageData
+            const sortedData = [...filteredData].sort((a, b) => {
+                // Сортировка по артикулу (как строке)
+                if (a.article < b.article) return -1;
+                if (a.article > b.article) return 1;
+                // Если артикулы равны, сортировка по числовому порядковому номеру из имени файла
+                const matchA = a.filename.match(/_(\d+)_[a-f0-9]+\.\w+$/);
+                const matchB = b.filename.match(/_(\d+)_[a-f0-9]+\.\w+$/);
+                const numA = matchA ? parseInt(matchA[1], 10) : 0;
+                const numB = matchB ? parseInt(matchB[1], 10) : 0;
+                return numA - numB;
+            });
+
+            // Теперь sortedData содержит правильные данные в правильном порядке
+            // Формируем imageDataToSend из этой отсортированной структуры
+            const imageDataToSend = sortedData.map(item => ({
+                url: item.url,
+                article: item.article, // Используем артикул из исходных данных
+                filename: item.filename
+            }));
+
+            if (!selectedTemplateName.trim()) {
+                showNotification('Имя шаблона пустое. Невозможно выбрать шаблон.', 'error');
+                return;
+            }
+
+            showNotification('Генерация XLSX документа для шаблона: ' + selectedTemplateName, 'success');
+
+            fetch('/admin/download-xlsx', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    image_data: imageDataToSend, // Отправляем отсортированные данные
+                    template_name: selectedTemplateName
+                })
             })
-        })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(err => { throw new Error(err.error || 'Ошибка сервера') });
-            }
-            return response.blob();
-        })
-        .then(blob => {
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = url;
-            const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-            a.download = `${selectedTemplateName}_album_${timestamp}.xlsx`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-            showNotification('XLSX документ успешно сгенерирован и скачан!', 'success');
-        })
-        .catch(error => {
-            console.error('Ошибка при генерации XLSX:', error);
-            showNotification('Ошибка при генерации XLSX: ' + error.message, 'error');
-        });
-    }
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw new Error(err.error || 'Ошибка сервера') });
+                }
+                return response.blob();
+            })
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+                a.download = `${selectedTemplateName}_album_${timestamp}.xlsx`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                showNotification('XLSX документ успешно сгенерирован и скачан!', 'success');
+            })
+            .catch(error => {
+                console.error('Ошибка при генерации XLSX:', error);
+                showNotification('Ошибка при генерации XLSX: ' + error.message, 'error');
+            });
+        }
+
+
 
     function deleteImage(imageUrl, urlItemElement) {
         if (!confirm('Вы уверены, что хотите удалить это изображение? Файлы и миниатюры будут удалены безвозвратно.')) {
