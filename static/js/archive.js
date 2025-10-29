@@ -53,19 +53,18 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+
     function processImageData() {
         if (imageData && Array.isArray(imageData)) {
             imageData.forEach(item => {
                 const template = item.template;
                 const article = item.article;
-
                 if (!articleData[template]) {
                     articleData[template] = {};
                 }
                 if (!articleData[template][article]) {
                     articleData[template][article] = [];
                 }
-
                 articleData[template][article].push({
                     url: item.url,
                     filename: item.filename,
@@ -77,9 +76,24 @@ document.addEventListener('DOMContentLoaded', function() {
             Object.keys(articleData).forEach(template => {
                 const sortedArticles = {};
                 Object.keys(articleData[template]).sort().forEach(article => {
-                    sortedArticles[article] = articleData[template][article].sort((a, b) =>
-                        a.filename.localeCompare(b.filename)
-                    );
+                    // Сортировка изображений внутри артикула по порядковому номеру
+                    const sortedItems = articleData[template][article].sort((a, b) => {
+                        // Извлекаем порядковый номер из имени файла
+                        // Ожидаемый формат: <артикул>_<номер>_<суффикс>.<расширение>
+                        const partsA = a.filename.replace(/\.[^/.]+$/, "").split('_');
+                        const partsB = b.filename.replace(/\.[^/.]+$/, "").split('_');
+
+                        // Проверяем, есть ли второй элемент (номер) после разделения
+                        const numA = partsA.length > 1 ? parseInt(partsA[1], 10) : 0;
+                        const numB = partsB.length > 1 ? parseInt(partsB[1], 10) : 0;
+
+                        // Сравниваем числовые значения номеров
+                        if (isNaN(numA) && isNaN(numB)) return 0;
+                        if (isNaN(numA)) return 1;
+                        if (isNaN(numB)) return -1;
+                        return numA - numB;
+                    });
+                    sortedArticles[article] = sortedItems;
                 });
                 articleData[template] = sortedArticles;
             });
@@ -87,6 +101,7 @@ document.addEventListener('DOMContentLoaded', function() {
             populateTemplateList();
         }
     }
+
 
     function populateTemplateList() {
         templateSelect.innerHTML = '<option value="">-- Выберите каталог --</option>';
