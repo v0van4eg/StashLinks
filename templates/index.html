@@ -78,6 +78,11 @@
                         <button type="submit" class="btn">📦 Загрузить архив</button>
                     </form>
 
+                    <!-- Разделитель между формами -->
+                    <div class="form-separator">
+                        <div class="separator-line"></div>
+                    </div>
+
                     <h1>Загрузка отдельных файлов</h1>
                     <form method="POST" action="{{ url_for('handle_upload') }}" enctype="multipart/form-data" id="single-form">
                         <div class="form-group">
@@ -90,13 +95,15 @@
                         </div>
                         <button type="submit" class="btn">📤 Загрузить файлы</button>
                     </form>
+                    <!-- Новая кнопка "Перейти в архив" -->
+                    <div style="margin-top: 20px;">
+                        <a href="/admin/archive" class="btn-secondary" style="margin-bottom: 20px; display: inline-block; text-decoration: none; width: 100%; text-align: center;">
+                            📤 Перейти к архиву ссылок
+                        </a>
+                    </div>
                 </div>
                 <div class="links-section">
-                    <h1>Сгенерированные ссылки</h1>
-                    <!-- Новая кнопка "Перейти в архив" -->
-                    <div style="margin-bottom: 20px;">
-                        <a href="{{ url_for('archive') }}" class="btn btn-secondary">📁 Перейти в архив</a>
-                    </div>
+                    <h1>Готовые ссылки</h1>
                     {% if image_urls %}
                     <div class="url-list" id="urlList">
                         {% set current_article = None %}

@@ -967,7 +967,7 @@ input[type="text"]:focus {
     border: none;
     padding: 10px 20px;
     border-radius: 5px;
-     display: inline-block; /* Для ссылок */
+    display: inline-block; /* Для ссылок */
     font-weight: bold;
     transition: background 0.3s ease;
 }
@@ -976,3 +976,26 @@ input[type="text"]:focus {
     background: linear-gradient(135deg, #95a5a6, #7f8c8d); /* Цвет при наведении */
 }   cursor: pointer;
     text-decoration: none; /* Для ссылок */
+
+/* Стили для разделителя форм */
+.form-separator {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 50px 0 40px 0;
+    color: var(--label-color);
+}
+
+.separator-line {
+    flex: 1;
+    height: 3px;
+    background: var(--input-border);
+}
+
+.separator-text {
+    padding: 0 20px;
+    font-weight: bold;
+    font-size: 14px;
+    color: var(--label-color);
+    background: var(--container-bg);
+}
