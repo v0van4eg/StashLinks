@@ -270,7 +270,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     ${item.url}
                     <span class="copy-hint">🔗 Кликните чтобы скопировать</span>
                 </div>
-                <small style="color: var(--label-color); margin-top: 5px; display: block;">${item.filename}</small>
             </div>
             <button class="delete-btn" data-url="${item.url}" title="Удалить изображение и файлы">
                 🗑️
