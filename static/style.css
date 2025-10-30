@@ -999,3 +999,24 @@ input[type="text"]:focus {
     color: var(--label-color);
     background: var(--container-bg);
 }
+
+/* Стили для счётчика файлов */
+#fileCounter {
+    background: linear-gradient(135deg, var(--btn-gradient-start), var(--btn-gradient-end));
+    color: white;
+    border-left: 4px solid var(--success-bg);
+}
+
+#fileCounter span {
+    font-size: 1.1em;
+    color: var(--footer-color);
+}
+
+/* Адаптивность для счётчика */
+@media (max-width: 768px) {
+    #fileCounter {
+        font-size: 14px;
+        padding: 8px;
+    }
+}
+

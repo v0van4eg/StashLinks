@@ -153,12 +153,45 @@ document.addEventListener('DOMContentLoaded', function() {
         articleSelect.disabled = false;
     }
 
+    // Функция для обновления счетчика файлов
+    function updateFileCounter() {
+        const fileCounter = document.getElementById('fileCounter');
+        const fileCountSpan = document.getElementById('fileCount');
+        const urlItems = document.querySelectorAll('#urlList .url-item');
+
+        const count = urlItems.length;
+
+        if (count > 0) {
+            fileCountSpan.textContent = count;
+            fileCounter.style.display = 'block';
+
+            // Добавляем информацию о том, что отображается
+            const archiveTitle = document.getElementById('archiveTitle');
+            let titleText = archiveTitle.textContent;
+
+            // Убираем старый счётчик из заголовка если есть
+            titleText = titleText.replace(/\(\d+ файлов?\)/, '');
+
+            // Добавляем счётчик в заголовок
+            archiveTitle.textContent = `${titleText} (${count} файлов)`;
+        } else {
+            fileCounter.style.display = 'none';
+
+            // Убираем счётчик из заголовка
+            const archiveTitle = document.getElementById('archiveTitle');
+            let titleText = archiveTitle.textContent;
+            titleText = titleText.replace(/\(\d+ файлов?\)/, '');
+            archiveTitle.textContent = titleText;
+        }
+    }
+
     // НОВАЯ ФУНКЦИЯ: Отображение всех ссылок выбранного каталога
     function displayTemplateUrls(templateName) {
         if (!templateName || !articleData[templateName]) {
             urlList.innerHTML = '';
             archiveTitle.textContent = 'Каталог не найден';
             bulkActions.style.display = 'none';
+            updateFileCounter(); // ОБНОВЛЯЕМ СЧЁТЧИК
             return;
         }
 
@@ -166,12 +199,16 @@ document.addEventListener('DOMContentLoaded', function() {
         archiveTitle.textContent = `Альбом: ${templateName} (все артикулы)`;
         urlList.innerHTML = '';
 
+        let totalFiles = 0;
+
         // Проходим по всем артикулам в каталоге
         Object.entries(urlsByArticle).forEach(([articleName, items]) => {
+            totalFiles += items.length;
+
             // Добавляем заголовок артикула
             const articleHeader = document.createElement('div');
             articleHeader.className = 'article-info';
-            articleHeader.textContent = `Артикул: ${articleName}`;
+            articleHeader.textContent = `Артикул: ${articleName} (${items.length} файлов)`;
             urlList.appendChild(articleHeader);
 
             // Добавляем каждое изображение артикула
@@ -182,6 +219,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         bulkActions.style.display = 'flex';
+        updateFileCounter(); // ОБНОВЛЯЕМ СЧЁТЧИК
     }
 
     // ИЗМЕНЕННАЯ ФУНКЦИЯ: Теперь отображает либо все артикулы каталога, либо конкретный артикул
@@ -190,6 +228,7 @@ document.addEventListener('DOMContentLoaded', function() {
             urlList.innerHTML = '';
             archiveTitle.textContent = 'Каталог не найден';
             bulkActions.style.display = 'none';
+            updateFileCounter(); // ОБНОВЛЯЕМ СЧЁТЧИК
             return;
         }
 
@@ -209,6 +248,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         bulkActions.style.display = 'flex';
+        updateFileCounter(); // ОБНОВЛЯЕМ СЧЁТЧИК
     }
 
     function displayAllUrls() {
@@ -216,6 +256,8 @@ document.addEventListener('DOMContentLoaded', function() {
         archiveTitle.textContent = 'Все ссылки';
 
         const groupedUrls = {};
+        let totalFiles = 0;
+
         if (imageData && Array.isArray(imageData)) {
             imageData.forEach(item => {
                 if (!groupedUrls[item.article]) {
@@ -226,9 +268,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         Object.entries(groupedUrls).forEach(([articleName, items]) => {
+            totalFiles += items.length;
+
             const articleHeader = document.createElement('div');
             articleHeader.className = 'article-info';
-            articleHeader.textContent = `Шаблон: ${items[0].template}, Артикул: ${articleName}`;
+            articleHeader.textContent = `Шаблон: ${items[0].template}, Артикул: ${articleName} (${items.length} файлов)`;
             urlList.appendChild(articleHeader);
 
             items.forEach(item => {
@@ -238,6 +282,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         bulkActions.style.display = 'flex';
+        updateFileCounter(); // ОБНОВЛЯЕМ СЧЁТЧИК
 
         // Сбросить выбранные значения
         templateSelect.value = '';
@@ -252,6 +297,7 @@ document.addEventListener('DOMContentLoaded', function() {
         urlItem.className = 'url-item';
         urlItem.setAttribute('data-article', articleName);
         urlItem.setAttribute('data-template', templateName);
+        urlItem.setAttribute('data-file', 'true'); // ДОБАВЛЯЕМ АТРИБУТ ДЛЯ ПОДСЧЁТА
         urlItem.innerHTML = `
             <div class="preview-container">
                 <img
@@ -427,6 +473,7 @@ document.addEventListener('DOMContentLoaded', function() {
             archiveTitle.textContent = 'Выберите каталог';
             bulkActions.style.display = 'none';
             articleSelect.disabled = true;
+            updateFileCounter(); // ОБНОВЛЯЕМ СЧЁТЧИК
         }
     }
 
@@ -441,6 +488,7 @@ document.addEventListener('DOMContentLoaded', function() {
             urlList.innerHTML = '';
             archiveTitle.textContent = 'Выберите каталог';
             bulkActions.style.display = 'none';
+            updateFileCounter(); // ОБНОВЛЯЕМ СЧЁТЧИК
         }
     }
 
@@ -722,6 +770,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.success) {
                 urlItemElement.remove();
                 showNotification('Изображение и файлы успешно удалены', 'success');
+
+                updateFileCounter(); // ОБНОВЛЯЕМ СЧЁТЧИК ПОСЛЕ УДАЛЕНИЯ
 
                 const remainingItems = document.querySelectorAll('.url-item');
                 if (remainingItems.length === 0) {
