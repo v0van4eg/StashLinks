@@ -93,6 +93,10 @@
                 </div>
                 <div class="links-section">
                     <h1>Сгенерированные ссылки</h1>
+                    <!-- Новая кнопка "Перейти в архив" -->
+                    <div style="margin-bottom: 20px;">
+                        <a href="{{ url_for('archive') }}" class="btn btn-secondary">📁 Перейти в архив</a>
+                    </div>
                     {% if image_urls %}
                     <div class="url-list" id="urlList">
                         {% set current_article = None %}

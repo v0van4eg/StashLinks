@@ -960,3 +960,19 @@ input[type="text"]:focus {
         font-size: 16px;
     }
 }
+
+.btn-secondary {
+    background: linear-gradient(135deg, #7f8c8d, #95a5a6); /* Цвета для второстепенной кнопки */
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+     display: inline-block; /* Для ссылок */
+    font-weight: bold;
+    transition: background 0.3s ease;
+}
+
+.btn-secondary:hover {
+    background: linear-gradient(135deg, #95a5a6, #7f8c8d); /* Цвет при наведении */
+}   cursor: pointer;
+    text-decoration: none; /* Для ссылок */
