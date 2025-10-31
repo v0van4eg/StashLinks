@@ -30,7 +30,8 @@ services:
       - ./static:/app/static
       - ./templates:/app/templates
       - ./uploads:/app/uploads
-      - ./:/app
+      # - ./gunicorn_config.py:/app/gunicorn_config.py
+      # - ./:/app
     environment:
       - BASE_URL
       - MAX_UPLOAD_SIZE

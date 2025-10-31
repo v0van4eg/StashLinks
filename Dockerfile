@@ -1,19 +1,27 @@
+# Dockerfile - оптимизация
 FROM python:3.11-slim
+
+# Установка только необходимых пакетов
+RUN apt-get update && apt-get install -y \
+    libjpeg-dev \
+    zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-COPY requirements.txt /app
-
+# Кэширование зависимостей
+COPY requirements.txt .
 RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
-COPY . /app
+# Копирование только необходимых файлов
+COPY app.py config.py gunicorn_config.py ./
+COPY generators/ ./generators/
+COPY templates/ ./templates/
+COPY static/ ./static/
 
-# CMD ["python", "app.py"]
+# Настройка Python для оптимизации памяти
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
 
 EXPOSE 5000
-
-# Новая команда для запуска Gunicorn
-# Пример: 4 рабочих процесса, привязка к localhost:5000
-#CMD ["gunicorn", "--workers", "8", "--bind", "0.0.0.0:5000", "app:app"]
-# Используем конфигурационный файл
 CMD ["gunicorn", "--config", "gunicorn_config.py", "app:app"]
