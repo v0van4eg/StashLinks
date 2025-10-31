@@ -26,6 +26,9 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentImageIndex = 0;
     let allImages = [];
 
+    // Переменные для управления индикатором загрузки
+    let loadingCheckInterval;
+
     // Инициализация темы
     initTheme();
 
@@ -37,18 +40,34 @@ document.addEventListener('DOMContentLoaded', function() {
         const loadingIndicator = document.getElementById('loadingIndicator');
         if (loadingIndicator) {
             loadingIndicator.style.display = 'block';
-            // Добавляем анимацию пульсации
+
+            // Добавляем анимации в документ
             const style = document.createElement('style');
             style.id = 'loadingAnimation';
             style.textContent = `
                 @keyframes pulse {
-                    0% { opacity: 0.7; }
-                    100% { opacity: 1; }
+                    0% {
+                        opacity: 0.6;
+                        transform: scaleY(1);
+                    }
+                    50% {
+                        opacity: 1;
+                        transform: scaleY(1.2);
+                    }
+                    100% {
+                        opacity: 0.6;
+                        transform: scaleY(1);
+                    }
                 }
-                @keyframes progress {
+                @keyframes slide {
                     0% { transform: translateX(-100%); }
-                    50% { transform: translateX(0%); }
                     100% { transform: translateX(100%); }
+                }
+                #loadingIndicator .pulse-bar {
+                    animation: pulse 1.5s ease-in-out infinite;
+                }
+                #loadingIndicator .progress-bar {
+                    animation: slide 2s linear infinite;
                 }
             `;
             document.head.appendChild(style);
@@ -58,12 +77,35 @@ document.addEventListener('DOMContentLoaded', function() {
     function hideLoadingIndicator() {
         const loadingIndicator = document.getElementById('loadingIndicator');
         const loadingAnimation = document.getElementById('loadingAnimation');
+
         if (loadingIndicator) {
             loadingIndicator.style.display = 'none';
         }
         if (loadingAnimation) {
             loadingAnimation.remove();
         }
+        if (loadingCheckInterval) {
+            clearInterval(loadingCheckInterval);
+        }
+    }
+
+    function startLoadingCheck() {
+        // Проверяем каждые 500ms наличие готовых ссылок
+        loadingCheckInterval = setInterval(() => {
+            const urlItems = document.querySelectorAll('.url-item');
+            if (urlItems.length > 0) {
+                clearInterval(loadingCheckInterval);
+                setTimeout(hideLoadingIndicator, 500); // Небольшая задержка для плавности
+            }
+        }, 500);
+
+        // На всякий случай останавливаем проверку через 5 минут
+        setTimeout(() => {
+            if (loadingCheckInterval) {
+                clearInterval(loadingCheckInterval);
+                hideLoadingIndicator();
+            }
+        }, 300000);
     }
 
     // Функция инициализации темы
@@ -147,24 +189,10 @@ document.addEventListener('DOMContentLoaded', function() {
         forms.forEach(form => {
             form.addEventListener('submit', function(e) {
                 // Проверяем, есть ли файлы для загрузки
-                const archiveInput = this.querySelector('input[type="file"]');
-                if (archiveInput && archiveInput.files.length > 0) {
+                const fileInput = this.querySelector('input[type="file"]');
+                if (fileInput && fileInput.files.length > 0) {
                     showLoadingIndicator();
-
-                    // Скрываем индикатор при успешной загрузке (когда появляются ссылки)
-                    const checkForUrls = setInterval(() => {
-                        const urlItems = document.querySelectorAll('.url-item');
-                        if (urlItems.length > 0) {
-                            clearInterval(checkForUrls);
-                            setTimeout(hideLoadingIndicator, 1000); // Даем небольшую задержку для плавности
-                        }
-                    }, 500);
-
-                    // На всякий случай скрываем индикатор через 5 минут
-                    setTimeout(() => {
-                        clearInterval(checkForUrls);
-                        hideLoadingIndicator();
-                    }, 300000);
+                    startLoadingCheck();
                 }
             });
         });

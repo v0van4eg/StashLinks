@@ -92,6 +92,7 @@ class BaseGenerator:
                 return 0
         return 0
 
+    # generators/base_generator.py (обновите метод generate)
     def generate(self, image_data, template_name):
         """Основной метод генерации документа"""
         try:
@@ -123,6 +124,7 @@ class BaseGenerator:
             print(f"Ошибка при генерации XLSX: {str(e)}")
             raise Exception(f"Error generating XLSX: {str(e)}")
 
+
     def generate_row_data(self, article, urls, template_name):
         """Генерирует данные для строки"""
         raise NotImplementedError("Метод generate_row_data должен быть реализован в дочернем классе")
@@ -132,6 +134,26 @@ class BaseGenerator:
         for col, value in enumerate(row_data, 1):
             ws.cell(row=row_num, column=col, value=value)
 
+    # generators/yandexmarket_generator.py (альтернативная версия adjust_column_widths)
     def adjust_column_widths(self, ws):
-        """Настраивает ширину столбцов"""
-        pass
+        # Настраиваем ширину в зависимости от разделителя
+        if self.separator == 'newline':
+            # Для переносов строк делаем колонку уже, но выше
+            column_widths = {
+                'A': 20,  # Артикул
+                'B': 60,  # Ссылки (уже, так как вертикально)
+            }
+
+            # Устанавливаем перенос текста для ВСЕЙ колонки B
+            for row in range(1, ws.max_row + 1):
+                cell = ws.cell(row=row, column=2)
+                cell.alignment = Alignment(wrap_text=True, vertical='top')
+        else:
+            # Для запятых - широкая колонка
+            column_widths = {
+                'A': 20,  # Артикул
+                'B': 100,  # Ссылки (широкая колонка для текста с запятыми)
+            }
+
+        for col, width in column_widths.items():
+            ws.column_dimensions[col].width = width
