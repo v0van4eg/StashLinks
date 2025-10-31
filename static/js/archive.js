@@ -191,20 +191,22 @@ document.addEventListener('DOMContentLoaded', function() {
             urlList.innerHTML = '';
             archiveTitle.textContent = 'Каталог не найден';
             bulkActions.style.display = 'none';
-            updateFileCounter(); // ОБНОВЛЯЕМ СЧЁТЧИК
             return;
         }
 
         const urlsByArticle = articleData[templateName];
-        archiveTitle.textContent = `Альбом: ${templateName} (все артикулы)`;
-        urlList.innerHTML = '';
 
+        // Подсчитываем общее количество файлов
         let totalFiles = 0;
+        Object.values(urlsByArticle).forEach(items => {
+            totalFiles += items.length;
+        });
+
+        archiveTitle.textContent = `Альбом: ${templateName} (все артикулы, ${totalFiles} файлов)`;
+        urlList.innerHTML = '';
 
         // Проходим по всем артикулам в каталоге
         Object.entries(urlsByArticle).forEach(([articleName, items]) => {
-            totalFiles += items.length;
-
             // Добавляем заголовок артикула
             const articleHeader = document.createElement('div');
             articleHeader.className = 'article-info';
@@ -219,23 +221,22 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         bulkActions.style.display = 'flex';
-        updateFileCounter(); // ОБНОВЛЯЕМ СЧЁТЧИК
     }
 
-    // ИЗМЕНЕННАЯ ФУНКЦИЯ: Теперь отображает либо все артикулы каталога, либо конкретный артикул
+
     function displayUrls(templateName, articleName = '') {
         if (!templateName || !articleData[templateName]) {
             urlList.innerHTML = '';
             archiveTitle.textContent = 'Каталог не найден';
             bulkActions.style.display = 'none';
-            updateFileCounter(); // ОБНОВЛЯЕМ СЧЁТЧИК
             return;
         }
 
         if (articleName && articleData[templateName][articleName]) {
             // Показать только выбранный артикул
             const urls = articleData[templateName][articleName];
-            archiveTitle.textContent = `Альбом: ${templateName}, Артикул: ${articleName}`;
+            const fileCount = urls.length;
+            archiveTitle.textContent = `Альбом: ${templateName}, Артикул: ${articleName} (${fileCount} файлов)`;
             urlList.innerHTML = '';
 
             urls.forEach(item => {
@@ -248,12 +249,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         bulkActions.style.display = 'flex';
-        updateFileCounter(); // ОБНОВЛЯЕМ СЧЁТЧИК
     }
+
 
     function displayAllUrls() {
         urlList.innerHTML = '';
-        archiveTitle.textContent = 'Все ссылки';
 
         const groupedUrls = {};
         let totalFiles = 0;
@@ -264,12 +264,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     groupedUrls[item.article] = [];
                 }
                 groupedUrls[item.article].push(item);
+                totalFiles++;
             });
         }
 
-        Object.entries(groupedUrls).forEach(([articleName, items]) => {
-            totalFiles += items.length;
+        archiveTitle.textContent = `Все ссылки (${totalFiles} файлов)`;
 
+        Object.entries(groupedUrls).forEach(([articleName, items]) => {
             const articleHeader = document.createElement('div');
             articleHeader.className = 'article-info';
             articleHeader.textContent = `Шаблон: ${items[0].template}, Артикул: ${articleName} (${items.length} файлов)`;
@@ -282,7 +283,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         bulkActions.style.display = 'flex';
-        updateFileCounter(); // ОБНОВЛЯЕМ СЧЁТЧИК
 
         // Сбросить выбранные значения
         templateSelect.value = '';
@@ -291,6 +291,7 @@ document.addEventListener('DOMContentLoaded', function() {
         currentTemplate = '';
         currentArticle = '';
     }
+
 
     function createUrlItem(item, articleName, templateName) {
         const urlItem = document.createElement('div');
