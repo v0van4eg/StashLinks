@@ -28,13 +28,6 @@ class YandexmarketGenerator(BaseGenerator):
                 'A': 20,  # Артикул
                 'B': 60,  # Ссылки (уже, так как вертикально)
             }
-
-            # Устанавливаем перенос текста для ВСЕХ строк в колонке B
-            for row in range(1, ws.max_row + 1):
-                cell = ws.cell(row=row, column=2)
-                # Если ячейка не пустая, устанавливаем перенос текста
-                if cell.value:
-                    cell.alignment = Alignment(wrap_text=True, vertical='top')
         else:
             # Для запятых - широкая колонка
             column_widths = {
@@ -63,8 +56,8 @@ class YandexmarketGenerator(BaseGenerator):
                 row_data = self.generate_row_data(article, urls, template_name)
                 self.write_row_data(ws, current_row, row_data)
 
-                # Сразу устанавливаем форматирование для текущей строки
-                if self.separator == 'newline' and len(urls) > 1:
+                # Устанавливаем форматирование для ВСЕХ строк, независимо от количества ссылок
+                if self.separator == 'newline':
                     cell = ws.cell(row=current_row, column=2)
                     cell.alignment = Alignment(wrap_text=True, vertical='top')
 
