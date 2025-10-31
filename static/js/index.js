@@ -32,6 +32,40 @@ document.addEventListener('DOMContentLoaded', function() {
     // Инициализация обработчиков событий
     initEventListeners();
 
+    // Функции для индикатора загрузки
+    function showLoadingIndicator() {
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        if (loadingIndicator) {
+            loadingIndicator.style.display = 'block';
+            // Добавляем анимацию пульсации
+            const style = document.createElement('style');
+            style.id = 'loadingAnimation';
+            style.textContent = `
+                @keyframes pulse {
+                    0% { opacity: 0.7; }
+                    100% { opacity: 1; }
+                }
+                @keyframes progress {
+                    0% { transform: translateX(-100%); }
+                    50% { transform: translateX(0%); }
+                    100% { transform: translateX(100%); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+
+    function hideLoadingIndicator() {
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const loadingAnimation = document.getElementById('loadingAnimation');
+        if (loadingIndicator) {
+            loadingIndicator.style.display = 'none';
+        }
+        if (loadingAnimation) {
+            loadingAnimation.remove();
+        }
+    }
+
     // Функция инициализации темы
     function initTheme() {
         const savedTheme = localStorage.getItem('theme');
@@ -107,6 +141,39 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Навигация по клавиатуре
         document.addEventListener('keydown', handleKeyboardNavigation);
+
+        // Обработчики отправки форм
+        const forms = document.querySelectorAll('form');
+        forms.forEach(form => {
+            form.addEventListener('submit', function(e) {
+                // Проверяем, есть ли файлы для загрузки
+                const archiveInput = this.querySelector('input[type="file"]');
+                if (archiveInput && archiveInput.files.length > 0) {
+                    showLoadingIndicator();
+
+                    // Скрываем индикатор при успешной загрузке (когда появляются ссылки)
+                    const checkForUrls = setInterval(() => {
+                        const urlItems = document.querySelectorAll('.url-item');
+                        if (urlItems.length > 0) {
+                            clearInterval(checkForUrls);
+                            setTimeout(hideLoadingIndicator, 1000); // Даем небольшую задержку для плавности
+                        }
+                    }, 500);
+
+                    // На всякий случай скрываем индикатор через 5 минут
+                    setTimeout(() => {
+                        clearInterval(checkForUrls);
+                        hideLoadingIndicator();
+                    }, 300000);
+                }
+            });
+        });
+
+        // Если на странице уже есть ссылки, убедимся что индикатор скрыт
+        const urlItems = document.querySelectorAll('.url-item');
+        if (urlItems.length > 0) {
+            hideLoadingIndicator();
+        }
     }
 
     // Переключение темы
@@ -339,7 +406,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-
     // Генерация XLSX документа
     function downloadXLSXDocument(selectedTemplateName, separator = 'comma') {
         const urlItems = document.querySelectorAll('.url-item');
@@ -455,10 +521,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Удаление изображения
     function deleteImage(imageUrl, urlItemElement) {
-//        if (!confirm('Вы уверены, что хотите удалить это изображение? Файлы и миниатюры будут удалены безвозвратно.')) {
-//            return;
-//        }
-
         const deleteBtn = urlItemElement.querySelector('.delete-btn');
         const originalText = deleteBtn.innerHTML;
         deleteBtn.innerHTML = '⏳';
