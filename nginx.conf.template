@@ -75,10 +75,10 @@ server {
     }
 }
 
-# Сервер для изображений на vldm.ru
+# Сервер для изображений на mooo.com
 server {
     listen 80;
-    server_name stashlink.vldm.ru;
+    server_name stashlink.mooo.com;
     client_max_body_size ${MAX_UPLOAD_SIZE};
 
     # Обслуживание загруженных изображений
