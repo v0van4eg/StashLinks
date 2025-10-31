@@ -37,7 +37,7 @@ if not os.path.exists(RESULTS_FOLDER):
 
 # --- Функции для мониторинга ресурсов ---
 def check_system_resources():
-    """Проверка системных ресурсов"""
+    """Проверка системных ресурсов (только для информации)"""
     try:
         memory = psutil.virtual_memory()
         disk = psutil.disk_usage('/')
@@ -51,44 +51,17 @@ def check_system_resources():
         logger.warning(f"Ошибка проверки ресурсов: {e}")
         return {
             'memory_percent': 0,
-            'disk_free_gb': 100,  # Предполагаем, что место есть
+            'disk_free_gb': 100,
             'load_avg': 0
         }
 
 
-def should_accept_upload():
-    """Проверка, можно ли принимать новую загрузку"""
-    resources = check_system_resources()
-
-    # Отказывать если:
-    # - память занята более чем на 85%
-    # - меньше 1GB свободного места на диске
-    # - нагрузка системы больше 5.0
-    if (resources['memory_percent'] > 85 or
-            resources['disk_free_gb'] < 1 or
-            resources['load_avg'] > 5.0):
-        logger.warning(f"Система перегружена. Ресурсы: {resources}")
-        return False
-    return True
-
-
-@app.before_request
-def check_resources():
-    """Проверка ресурсов перед запросами загрузки"""
-    if request.endpoint in ['handle_upload']:
-        if not should_accept_upload():
-            return jsonify({'error': 'Система перегружена, попробуйте позже'}), 503
-
+# Убрана проверка should_accept_upload - принимаем все загрузки
 
 # --- Оптимизированная функция создания миниатюры ---
 def create_thumbnail(source_path, target_path, size=(90, 90)):
     """
     Создает миниатюру изображения.
-
-    Args:
-        source_path (str): Путь к исходному изображению.
-        target_path (str): Путь для сохранения миниатюры.
-        size (tuple): Размер миниатюры (ширина, высота).
     """
     try:
         with Image.open(source_path) as img:
@@ -202,11 +175,10 @@ def process_single_file_efficiently(source_path, filename, template_name, articl
         return None
 
 
-# --- Оптимизированная обработка ZIP-архивов ---
-def process_zip_archive_optimized(zip_file, template_name, max_files=1000):
-    """Оптимизированная обработка ZIP-архива с батчингом и ограничениями"""
+# --- Оптимизированная обработка ZIP-архивов БЕЗ ОГРАНИЧЕНИЙ ---
+def process_zip_archive_unlimited(zip_file, template_name):
+    """Обработка ZIP-архива без ограничений на количество файлов"""
     image_urls = []
-    processed_files = 0
 
     with tempfile.TemporaryDirectory() as temp_dir:
         zip_path = os.path.join(temp_dir, zip_file.filename)
@@ -214,7 +186,7 @@ def process_zip_archive_optimized(zip_file, template_name, max_files=1000):
 
         try:
             with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                # Получаем информацию о файлах для сортировки по размеру
+                # Получаем информацию о файлах
                 file_infos = []
                 for file_info in zip_ref.infolist():
                     if (not file_info.is_dir() and
@@ -222,17 +194,10 @@ def process_zip_archive_optimized(zip_file, template_name, max_files=1000):
                             not any(skip in file_info.filename.lower() for skip in ['thumbs.db', '.ds_store'])):
                         file_infos.append(file_info)
 
-                # Сортируем по размеру (сначала маленькие файлы)
-                file_infos.sort(key=lambda x: x.file_size)
+                logger.info(f"Начата обработка {len(file_infos)} файлов")
 
-                logger.info(f"Найдено {len(file_infos)} файлов для обработки")
-
-                # Обрабатываем файлы с ограничением по количеству
-                for file_info in file_infos:
-                    if processed_files >= max_files:
-                        logger.warning(f"Достигнут лимит в {max_files} файлов")
-                        break
-
+                # Обрабатываем ВСЕ файлы без ограничений
+                for i, file_info in enumerate(file_infos):
                     try:
                         # Извлекаем только один файл
                         zip_ref.extract(file_info, temp_dir)
@@ -251,7 +216,10 @@ def process_zip_archive_optimized(zip_file, template_name, max_files=1000):
 
                         if result:
                             image_urls.append(result)
-                            processed_files += 1
+
+                        # Прогресс каждые 100 файлов
+                        if (i + 1) % 100 == 0:
+                            logger.info(f"Обработано {i + 1}/{len(file_infos)} файлов")
 
                         # Очищаем временный файл сразу после обработки
                         try:
@@ -272,13 +240,6 @@ def process_zip_archive_optimized(zip_file, template_name, max_files=1000):
 
     logger.info(f"Успешно обработано {len(image_urls)} файлов")
     return image_urls
-
-
-# --- Старая функция для совместимости (можно удалить после тестирования) ---
-def process_zip_archive(zip_file, template_name):
-    """Обрабатывает ZIP-архив и извлекает изображения"""
-    logger.info("Используется оптимизированная обработка архива")
-    return process_zip_archive_optimized(zip_file, template_name)
 
 
 # --- Функции для работы с XLSX ---
@@ -323,18 +284,17 @@ def load_results_from_file(result_id):
     return None
 
 
-# --- Логика обработки загрузок ---
+# --- Логика обработки загрузок БЕЗ ОГРАНИЧЕНИЙ ---
 def handle_single_upload_logic(request):
-    """Логика обработки отдельных изображений"""
+    """Логика обработки отдельных изображений БЕЗ ограничений"""
     product_name = request.form.get('product_name', '').strip()
 
     if not product_name:
         return None, 'Заполните поле product_name'
 
-    # Ограничение количества файлов
+    # БЕЗ ограничения количества файлов
     uploaded_files = request.files.getlist('images')
-    if len(uploaded_files) > 100:
-        return None, 'Слишком много файлов. Максимум 100.'
+    logger.info(f"Начата обработка {len(uploaded_files)} отдельных файлов")
 
     template_folder = "generic"
     product_folder = safe_folder_name(product_name)
@@ -342,7 +302,7 @@ def handle_single_upload_logic(request):
     os.makedirs(full_path, exist_ok=True)
 
     image_urls = []
-    for file in uploaded_files:
+    for i, file in enumerate(uploaded_files):
         if file and allowed_file(file.filename):
             try:
                 random_hex = uuid.uuid4().hex[:6]
@@ -381,6 +341,10 @@ def handle_single_upload_logic(request):
                     'thumbnail_url': thumbnail_url
                 })
 
+                # Прогресс каждые 50 файлов
+                if (i + 1) % 50 == 0:
+                    logger.info(f"Обработано {i + 1}/{len(uploaded_files)} отдельных файлов")
+
             except Exception as e:
                 logger.error(f"Ошибка обработки файла {file.filename}: {e}")
                 continue
@@ -396,7 +360,7 @@ def handle_single_upload_logic(request):
 
 
 def handle_archive_upload_logic(request):
-    """Логика обработки ZIP архива"""
+    """Логика обработки ZIP архива БЕЗ ограничений"""
     album_name = request.form.get('album_name', '').strip()
     archive_file = request.files['archive']
 
@@ -412,12 +376,12 @@ def handle_archive_upload_logic(request):
         album_name = safe_folder_name(album_name)
 
     try:
-        # Используем оптимизированную обработку
+        # Используем обработку БЕЗ ограничений
         start_time = time.time()
-        image_data = process_zip_archive_optimized(archive_file, album_name)
+        image_data = process_zip_archive_unlimited(archive_file, album_name)
         processing_time = time.time() - start_time
 
-        logger.info(f"Архив обработан за {processing_time:.2f} секунд")
+        logger.info(f"Архив обработан за {processing_time:.2f} секунд, файлов: {len(image_data)}")
 
         if not image_data:
             return None, 'В архиве не найдено подходящих изображений'
@@ -511,7 +475,7 @@ def download_xlsx():
         if template_name not in Config.TEMPLATES:
             return jsonify({'error': f'Invalid template: {template_name}'}), 400
 
-        logger.info(f"Генерация XLSX для шаблона: {template_name}, разделитель: {separator}")
+        logger.info(f"Генерация XLSX для шаблона: {template_name}, файлов: {len(image_data)}")
 
         # Сортировка данных
         def sort_key(item):
