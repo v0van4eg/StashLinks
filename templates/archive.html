@@ -72,26 +72,29 @@
                                 <option value="">-- Выберите артикул --</option>
                             </select>
                         </div>
+                    <!-- Удаление альбома и артикула -->
+                        <div class="form-group" id="deleteAlbumSection" style="display: none;">
+                            <button id="deleteAlbumBtn" class="btn btn-danger" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">
+                                🗑️ Удалить альбом
+                            </button>
+                            <div class="help-text" style="color: #e74c3c; margin-top: 8px;">
+                                ⚠️ Удалит ВСЕ артикулы и изображения в этом альбоме
+                            </div>
+                        </div>
+
+                        <div class="form-group" id="deleteArticleSection" style="display: none;">
+                            <button id="deleteArticleBtn" class="btn btn-danger" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">
+                                🗑️ Удалить артикул
+                            </button>
+                            <div class="help-text" style="color: #e74c3c; margin-top: 8px;">
+                                ⚠️ Удалит ВСЕ изображения этого артикула
+                            </div>
+                        </div>
                         <button id="showAllBtn" class="btn btn-primary">Показать все ссылки</button>
                     {% endif %}
                 </div>
 
                 <!-- ============   Правая колонка - список ссылок   ============ -->
-<!--                <div class="links-section">-->
-<!--                    <h1 id="archiveTitle">Выберите артикул</h1>-->
-<!--                    <div class="url-list" id="urlList"></div>-->
-<!--                    <div class="bulk-actions" id="bulkActions" style="display: none;">-->
-<!--                        <button class="btn btn-secondary" id="copyAllBtn">-->
-<!--                            📋 Копировать все ссылки (запятая)-->
-<!--                        </button>-->
-<!--                        <button class="btn btn-secondary" id="copyAllListBtn">-->
-<!--                            📝 Копировать все ссылки (перенос строки)-->
-<!--                        </button>-->
-<!--                        <button class="btn btn-secondary" id="triggerXLSXModalBtn">-->
-<!--                            📋 Сгенерировать документ XLSX-->
-<!--                        </button>-->
-<!--                    </div>-->
-<!--                </div>-->
 
                     <div class="links-section">
                         <h1 id="archiveTitle">Выберите артикул</h1>

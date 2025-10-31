@@ -18,6 +18,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const copyAllListBtn = document.getElementById('copyAllListBtn');
     const showAllBtn = document.getElementById('showAllBtn');
 
+    // Новые элементы для удаления альбома и артикула
+    const deleteAlbumBtn = document.getElementById('deleteAlbumBtn');
+    const deleteArticleBtn = document.getElementById('deleteArticleBtn');
+    const deleteAlbumSection = document.getElementById('deleteAlbumSection');
+    const deleteArticleSection = document.getElementById('deleteArticleSection');
+
     // Элементы модального окна изображений
     const imageModal = document.getElementById('imageModal');
     const imageModalImg = document.getElementById('imageModalImg');
@@ -172,7 +178,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Убираем старый счётчик из заголовка если есть
             titleText = titleText.replace(/\(\d+ файлов?\)/, '');
 
-            // Добавляем счётчик в заголовок
+            // Добавляем счётчик в заголовка
             archiveTitle.textContent = `${titleText} (${count} файлов)`;
         } else {
             fileCounter.style.display = 'none';
@@ -221,14 +227,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         bulkActions.style.display = 'flex';
+        updateFileCounter();
     }
-
 
     function displayUrls(templateName, articleName = '') {
         if (!templateName || !articleData[templateName]) {
             urlList.innerHTML = '';
             archiveTitle.textContent = 'Каталог не найден';
             bulkActions.style.display = 'none';
+            updateFileCounter();
             return;
         }
 
@@ -249,8 +256,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         bulkActions.style.display = 'flex';
+        updateFileCounter();
     }
-
 
     function displayAllUrls() {
         urlList.innerHTML = '';
@@ -283,6 +290,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         bulkActions.style.display = 'flex';
+        updateFileCounter();
 
         // Сбросить выбранные значения
         templateSelect.value = '';
@@ -290,15 +298,18 @@ document.addEventListener('DOMContentLoaded', function() {
         articleSelect.disabled = true;
         currentTemplate = '';
         currentArticle = '';
-    }
 
+        // Скрыть кнопки удаления
+        deleteAlbumSection.style.display = 'none';
+        deleteArticleSection.style.display = 'none';
+    }
 
     function createUrlItem(item, articleName, templateName) {
         const urlItem = document.createElement('div');
         urlItem.className = 'url-item';
         urlItem.setAttribute('data-article', articleName);
         urlItem.setAttribute('data-template', templateName);
-        urlItem.setAttribute('data-file', 'true'); // ДОБАВЛЯЕМ АТРИБУТ ДЛЯ ПОДСЧЁТА
+        urlItem.setAttribute('data-file', 'true');
         urlItem.innerHTML = `
             <div class="preview-container">
                 <img
@@ -330,6 +341,14 @@ document.addEventListener('DOMContentLoaded', function() {
         templateSelect.addEventListener('change', handleTemplateChange);
         articleSelect.addEventListener('change', handleArticleChange);
         showAllBtn.addEventListener('click', displayAllUrls);
+
+        // Кнопки удаления альбома и артикула
+        if (deleteAlbumBtn) {
+            deleteAlbumBtn.addEventListener('click', handleDeleteAlbum);
+        }
+        if (deleteArticleBtn) {
+            deleteArticleBtn.addEventListener('click', handleDeleteArticle);
+        }
 
         // Модальное окно XLSX
         if (triggerXLSXModalBtn) {
@@ -380,6 +399,172 @@ document.addEventListener('DOMContentLoaded', function() {
         document.addEventListener('keydown', handleKeyboardNavigation);
     }
 
+    // Функции для удаления альбома и артикула
+    function handleDeleteAlbum() {
+        if (!currentTemplate) {
+            showNotification('Сначала выберите альбом', 'error');
+            return;
+        }
+
+        if (confirm(`Вы уверены, что хотите удалить ВЕСЬ альбом "${currentTemplate}"?\n\nЭто действие удалит все артикулы и изображения в этом альбоме и не может быть отменено!`)) {
+            deleteAlbum(currentTemplate);
+        }
+    }
+
+    function handleDeleteArticle() {
+        if (!currentTemplate || !currentArticle) {
+            showNotification('Сначала выберите альбом и артикул', 'error');
+            return;
+        }
+
+        if (confirm(`Вы уверены, что хотите удалить артикул "${currentArticle}" из альбома "${currentTemplate}"?\n\nЭто действие удалит все изображения этого артикула и не может быть отменено!`)) {
+            deleteArticle(currentTemplate, currentArticle);
+        }
+    }
+
+    function deleteAlbum(albumName) {
+        const deleteBtn = deleteAlbumBtn;
+        const originalText = deleteBtn.innerHTML;
+        deleteBtn.innerHTML = '⏳ Удаление...';
+        deleteBtn.disabled = true;
+
+        fetch('/admin/delete-album', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ album_name: albumName })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification(`Альбом "${albumName}" успешно удален`, 'success');
+
+                // Обновляем интерфейс
+                delete articleData[albumName];
+                populateTemplateList();
+
+                // Сбрасываем выбор
+                templateSelect.value = '';
+                articleSelect.value = '';
+                articleSelect.disabled = true;
+                deleteAlbumSection.style.display = 'none';
+                deleteArticleSection.style.display = 'none';
+
+                // Очищаем список ссылок
+                urlList.innerHTML = '';
+                archiveTitle.textContent = 'Выберите каталог';
+                bulkActions.style.display = 'none';
+                updateFileCounter();
+
+            } else {
+                throw new Error(data.error || 'Ошибка при удалении альбома');
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка при удалении альбома:', error);
+            showNotification('Ошибка при удаления альбома: ' + error.message, 'error');
+        })
+        .finally(() => {
+            deleteBtn.innerHTML = originalText;
+            deleteBtn.disabled = false;
+        });
+    }
+
+    function deleteArticle(albumName, articleName) {
+        const deleteBtn = deleteArticleBtn;
+        const originalText = deleteBtn.innerHTML;
+        deleteBtn.innerHTML = '⏳ Удаление...';
+        deleteBtn.disabled = true;
+
+        fetch('/admin/delete-article', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                album_name: albumName,
+                article_name: articleName
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification(`Артикул "${articleName}" успешно удален из альбома "${albumName}"`, 'success');
+
+                // Обновляем данные
+                if (articleData[albumName] && articleData[albumName][articleName]) {
+                    delete articleData[albumName][articleName];
+                }
+
+                // Обновляем список артикулов
+                populateArticleList(albumName);
+
+                // Сбрасываем выбор артикула
+                articleSelect.value = '';
+                deleteArticleSection.style.display = 'none';
+
+                // Показываем все артикулы альбома
+                displayUrls(albumName);
+
+            } else {
+                throw new Error(data.error || 'Ошибка при удалении артикула');
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка при удалении артикула:', error);
+            showNotification('Ошибка при удаления артикула: ' + error.message, 'error');
+        })
+        .finally(() => {
+            deleteBtn.innerHTML = originalText;
+            deleteBtn.disabled = false;
+        });
+    }
+
+    function handleTemplateChange() {
+        const selectedTemplate = this.value;
+        currentTemplate = selectedTemplate;
+        populateArticleList(selectedTemplate);
+
+        // Показываем/скрываем кнопку удаления альбома
+        if (selectedTemplate) {
+            deleteAlbumSection.style.display = 'block';
+        } else {
+            deleteAlbumSection.style.display = 'none';
+        }
+
+        // Скрываем кнопку удаления артикула при смене альбома
+        deleteArticleSection.style.display = 'none';
+        currentArticle = '';
+
+        if (selectedTemplate) {
+            displayUrls(selectedTemplate);
+        } else {
+            urlList.innerHTML = '';
+            archiveTitle.textContent = 'Выберите каталог';
+            bulkActions.style.display = 'none';
+            articleSelect.disabled = true;
+            updateFileCounter();
+        }
+    }
+
+    function handleArticleChange() {
+        const selectedArticle = this.value;
+        currentArticle = selectedArticle;
+
+        // Показываем/скрываем кнопку удаления артикула
+        if (selectedArticle) {
+            deleteArticleSection.style.display = 'block';
+        } else {
+            deleteArticleSection.style.display = 'none';
+        }
+
+        if (currentTemplate) {
+            displayUrls(currentTemplate, selectedArticle);
+        } else {
+            urlList.innerHTML = '';
+            archiveTitle.textContent = 'Выберите каталог';
+            bulkActions.style.display = 'none';
+            updateFileCounter();
+        }
+    }
+
     // Функции для модального окна изображений
     function openImageModal(imageIndex) {
         if (!allImages.length) return;
@@ -392,14 +577,14 @@ document.addEventListener('DOMContentLoaded', function() {
         imageModalUrl.textContent = image.originalSrc;
 
         imageModal.style.display = 'block';
-        document.body.style.overflow = 'hidden'; // Блокируем прокрутку страницы
+        document.body.style.overflow = 'hidden';
 
         updateNavigationButtons();
     }
 
     function closeImageModal() {
         imageModal.style.display = 'none';
-        document.body.style.overflow = ''; // Восстанавливаем прокрутку
+        document.body.style.overflow = '';
     }
 
     function showPrevImage() {
@@ -461,38 +646,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function handleTemplateChange() {
-        const selectedTemplate = this.value;
-        currentTemplate = selectedTemplate;
-        populateArticleList(selectedTemplate);
-
-        if (selectedTemplate) {
-            // При выборе каталога показываем все его артикулы
-            displayUrls(selectedTemplate);
-        } else {
-            urlList.innerHTML = '';
-            archiveTitle.textContent = 'Выберите каталог';
-            bulkActions.style.display = 'none';
-            articleSelect.disabled = true;
-            updateFileCounter(); // ОБНОВЛЯЕМ СЧЁТЧИК
-        }
-    }
-
-    function handleArticleChange() {
-        const selectedArticle = this.value;
-        currentArticle = selectedArticle;
-
-        if (currentTemplate) {
-            // При выборе артикула показываем только его, при сбросе - все артикулы каталога
-            displayUrls(currentTemplate, selectedArticle);
-        } else {
-            urlList.innerHTML = '';
-            archiveTitle.textContent = 'Выберите каталог';
-            bulkActions.style.display = 'none';
-            updateFileCounter(); // ОБНОВЛЯЕМ СЧЁТЧИК
-        }
-    }
-
     function closeXLSXModal() {
         xlsxModal.style.display = 'none';
         templateSelectForXLSX.value = '';
@@ -502,14 +655,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function handleXLSXGeneration() {
         const selectedTemplate = templateSelectForXLSX.value;
-        let separator = 'comma'; // по умолчанию
+        let separator = 'comma';
 
         if (selectedTemplate === 'В ячейку') {
             separator = separatorSelect.value;
         }
 
         if (selectedTemplate) {
-            // Показываем информативное сообщение о том, что генерируется
             let message = `Генерация документа для шаблона: ${selectedTemplate}`;
             if (currentTemplate) {
                 message += `, альбом: ${currentTemplate}`;
@@ -710,7 +862,7 @@ document.addEventListener('DOMContentLoaded', function() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                image_data: imageDataToSend, // Отправляем только текущие данные
+                image_data: imageDataToSend,
                 template_name: selectedTemplateName,
                 separator: separator
             })
@@ -772,7 +924,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 urlItemElement.remove();
                 showNotification('Изображение и файлы успешно удалены', 'success');
 
-                updateFileCounter(); // ОБНОВЛЯЕМ СЧЁТЧИК ПОСЛЕ УДАЛЕНИЯ
+                updateFileCounter();
 
                 const remainingItems = document.querySelectorAll('.url-item');
                 if (remainingItems.length === 0) {

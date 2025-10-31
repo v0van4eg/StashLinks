@@ -659,5 +659,79 @@ def delete_image():
         return jsonify({'error': f'Ошибка при удалении изображения: {str(e)}'}), 500
 
 
+@app.route('/admin/delete-album', methods=['POST'])
+def delete_album():
+    """Удаляет весь альбом со всеми артикулами и изображениями"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        album_name = data.get('album_name')
+        if not album_name:
+            return jsonify({'error': 'No album name provided'}), 400
+
+        # Безопасно декодируем имя альбома
+        album_folder = unquote(album_name)
+
+        # Полный путь к папке альбома
+        album_path = os.path.join(Config.UPLOAD_FOLDER, album_folder)
+
+        if not os.path.exists(album_path):
+            return jsonify({'error': 'Album not found'}), 404
+
+        # Рекурсивно удаляем всю папку альбома
+        shutil.rmtree(album_path)
+        logger.info(f"Альбом удален: {album_path}")
+
+        return jsonify({'success': True, 'message': f'Альбом "{album_name}" успешно удален'})
+
+    except Exception as e:
+        logger.error(f"Error deleting album: {str(e)}")
+        return jsonify({'error': f'Ошибка при удалении альбома: {str(e)}'}), 500
+
+
+@app.route('/admin/delete-article', methods=['POST'])
+def delete_article():
+    """Удаляет артикул со всеми изображениями из альбома"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        album_name = data.get('album_name')
+        article_name = data.get('article_name')
+
+        if not album_name or not article_name:
+            return jsonify({'error': 'Album name and article name are required'}), 400
+
+        # Безопасно декодируем имена
+        album_folder = unquote(album_name)
+        article_folder = unquote(article_name)
+
+        # Полный путь к папке артикула
+        article_path = os.path.join(Config.UPLOAD_FOLDER, album_folder, article_folder)
+
+        if not os.path.exists(article_path):
+            return jsonify({'error': 'Article not found'}), 404
+
+        # Рекурсивно удаляем папку артикула
+        shutil.rmtree(article_path)
+        logger.info(f"Артикул удален: {article_path}")
+
+        # Проверяем, не пуста ли теперь папка альбома
+        album_path = os.path.join(Config.UPLOAD_FOLDER, album_folder)
+        if os.path.exists(album_path) and not os.listdir(album_path):
+            os.rmdir(album_path)
+            logger.info(f"Пустая папка альбома удалена: {album_path}")
+
+        return jsonify(
+            {'success': True, 'message': f'Артикул "{article_name}" успешно удален из альбома "{album_name}"'})
+
+    except Exception as e:
+        logger.error(f"Error deleting article: {str(e)}")
+        return jsonify({'error': f'Ошибка при удалении артикула: {str(e)}'}), 500
+
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
