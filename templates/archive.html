@@ -55,11 +55,6 @@
                     {% if error %}
                         <div class="error">{{ error }}</div>
                     {% else %}
-                    <!-- Новая кнопка "Перейти к загрузкам" -->
-                    <a href="/admin" class="btn-secondary" style="margin-bottom: 20px; display: inline-block; text-decoration: none; width: 100%; text-align: center;">
-                        📤 Перейти к загрузкам
-                    </a>
-
                         <div class="form-group">
                             <label for="templateSelect">Альбом:</label>
                             <select id="templateSelect" name="template_name" required>
@@ -90,7 +85,16 @@
                                 ⚠️ Удалит ВСЕ изображения этого артикула
                             </div>
                         </div>
-                        <button id="showAllBtn" class="btn btn-primary">Показать все ссылки</button>
+
+                        <!-- Кнопки внизу левой колонки -->
+                        <div class="bottom-buttons">
+                            <button id="showAllBtn" class="btn btn-primary" style="width: 100%;">
+                                Показать все ссылки
+                            </button>
+                            <a href="/admin" class="btn-secondary" style="margin-bottom: 10px; display: block; text-decoration: none; width: 100%; text-align: center;">
+                                📤 Перейти к загрузкам
+                            </a>
+                        </div>
                     {% endif %}
                 </div>
 

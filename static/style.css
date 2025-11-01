@@ -132,6 +132,7 @@ body {
     box-shadow: var(--container-shadow);
     max-width: calc(30% - 15px);
     overflow-y: auto;
+    position: relative; /* Добавлено для позиционирования */
 }
 
 /* Правая колонка - ссылки (70%) */
@@ -1077,3 +1078,18 @@ input[type="text"]:focus {
     }
 }
 
+/* Добавленный CSS для стилей кнопок внизу левой колонки */
+.bottom-buttons {
+    position: absolute;
+    bottom: 30px;
+    left: 30px;
+    right: 30px;
+}
+
+/* Стили для кнопок внизу левой колонки */
+.bottom-buttons .btn {
+    margin-bottom: 15px; /* Промежуток между кнопками */
+}
+.bottom-buttons .btn:last-child {
+    margin-bottom: 0; /* Убираем отступ у последней кнопки */
+}

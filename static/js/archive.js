@@ -880,7 +880,9 @@ document.addEventListener('DOMContentLoaded', function() {
             a.href = url;
 
             // Формируем информативное имя файла
-            let filenameParts = [selectedTemplateName];
+//            let filenameParts = [selectedTemplateName];
+
+            let filenameParts = [];
 
             if (currentTemplate) {
                 filenameParts.push(currentTemplate);
@@ -889,7 +891,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 filenameParts.push(currentArticle);
             }
 
-            filenameParts.push(separator === 'newline' ? 'перенос' : 'запятые');
+//            filenameParts.push(separator === 'newline' ? 'перенос' : 'запятые');
 
             const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
             const filename = `${filenameParts.join('_')}_${timestamp}.xlsx`;
